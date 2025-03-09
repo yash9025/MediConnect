@@ -10,14 +10,26 @@ const Login = () => {
     const { setDToken } = useContext(DoctorContext);
 
     // Load saved email & password or set default values
-    const [email, setEmail] = useState(localStorage.getItem("savedEmail") || "admin@example.com");
-    const [password, setPassword] = useState(localStorage.getItem("savedPassword") || "password123");
+    const [email, setEmail] = useState(localStorage.getItem("savedEmail") || "admin@mediconnect.com");
+    const [password, setPassword] = useState(localStorage.getItem("savedPassword") || "yash@994");
 
     // Update localStorage when email or password changes
     useEffect(() => {
         localStorage.setItem("savedEmail", email);
         localStorage.setItem("savedPassword", password);
     }, [email, password]);
+
+    const switchRole = () => {
+        if (state === "Admin") {
+            setState("Doctor");
+            setEmail("richard@mediconnect.com");
+            setPassword("12345678");
+        } else {
+            setState("Admin");
+            setEmail("admin@mediconnect.com");
+            setPassword("yash@994");
+        }
+    };
 
     const onSubmitHandler = async (event) => {
         event.preventDefault();
@@ -88,7 +100,7 @@ const Login = () => {
                     {state === "Admin" ? "Doctor" : "Admin"} Login?
                     <span
                         className="text-blue-600 cursor-pointer ml-1 hover:underline"
-                        onClick={() => setState(state === "Admin" ? "Doctor" : "Admin")}
+                        onClick={switchRole}
                     >
                         Click here
                     </span>
