@@ -6,7 +6,7 @@ import { AppContext } from "../context/AppContext.jsx";
 const Navbar = () => {
     const navigate = useNavigate();
 
-    const {token,setToken,userData} = useContext(AppContext);
+    const { token, setToken, userData } = useContext(AppContext);
 
     const [showMenu, setShowMenu] = useState(false);
 
@@ -40,8 +40,7 @@ const Navbar = () => {
                     <NavLink
                         to="/"
                         className={({ isActive }) =>
-                            `relative pb-1 transition-all duration-300 hover:text-green-600 ${
-                                isActive ? "text-green-600 border-b-2 border-green-500" : ""
+                            `relative pb-1 transition-all duration-300 hover:text-green-600 ${isActive ? "text-green-600 border-b-2 border-green-500" : ""
                             }`
                         }
                     >
@@ -52,8 +51,7 @@ const Navbar = () => {
                     <NavLink
                         to="/doctors"
                         className={({ isActive }) =>
-                            `relative pb-1 transition-all duration-300 hover:text-green-600 ${
-                                isActive ? "text-green-600 border-b-2 border-green-500" : ""
+                            `relative pb-1 transition-all duration-300 hover:text-green-600 ${isActive ? "text-green-600 border-b-2 border-green-500" : ""
                             }`
                         }
                     >
@@ -64,8 +62,7 @@ const Navbar = () => {
                     <NavLink
                         to="/about"
                         className={({ isActive }) =>
-                            `relative pb-1 transition-all duration-300 hover:text-green-600 ${
-                                isActive ? "text-green-600 border-b-2 border-green-500" : ""
+                            `relative pb-1 transition-all duration-300 hover:text-green-600 ${isActive ? "text-green-600 border-b-2 border-green-500" : ""
                             }`
                         }
                     >
@@ -76,14 +73,24 @@ const Navbar = () => {
                     <NavLink
                         to="/contact"
                         className={({ isActive }) =>
-                            `relative pb-1 transition-all duration-300 hover:text-green-600 ${
-                                isActive ? "text-green-600 border-b-2 border-green-500" : ""
+                            `relative pb-1 transition-all duration-300 hover:text-green-600 ${isActive ? "text-green-600 border-b-2 border-green-500" : ""
                             }`
                         }
                     >
                         Contact
                     </NavLink>
                 </li>
+                <li>
+                    <a
+                        href="https://mediconnect-admin-zi16.onrender.com"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="bg-green-600 text-white px-4 py-2 rounded-full text-sm hover:bg-green-700 transition-all duration-200"
+                    >
+                        Admin Panel
+                    </a>
+                </li>
+
             </ul>
 
             {/* Buttons Section */}
@@ -161,8 +168,7 @@ const Navbar = () => {
                                     <NavLink
                                         to="/"
                                         className={({ isActive }) =>
-                                            `relative transition-all duration-300 hover:text-green-600 ${
-                                                isActive ? "text-green-600" : ""
+                                            `relative transition-all duration-300 hover:text-green-600 ${isActive ? "text-green-600" : ""
                                             }`
                                         }
                                         onClick={closeMenu}  // Close menu when clicked
@@ -174,8 +180,7 @@ const Navbar = () => {
                                     <NavLink
                                         to="/doctors"
                                         className={({ isActive }) =>
-                                            `relative transition-all duration-300 hover:text-green-600 ${
-                                                isActive ? "text-green-600" : ""
+                                            `relative transition-all duration-300 hover:text-green-600 ${isActive ? "text-green-600" : ""
                                             }`
                                         }
                                         onClick={closeMenu}  // Close menu when clicked
@@ -187,8 +192,7 @@ const Navbar = () => {
                                     <NavLink
                                         to="/about"
                                         className={({ isActive }) =>
-                                            `relative transition-all duration-300 hover:text-green-600 ${
-                                                isActive ? "text-green-600" : ""
+                                            `relative transition-all duration-300 hover:text-green-600 ${isActive ? "text-green-600" : ""
                                             }`
                                         }
                                         onClick={closeMenu}  // Close menu when clicked
@@ -200,8 +204,7 @@ const Navbar = () => {
                                     <NavLink
                                         to="/contact"
                                         className={({ isActive }) =>
-                                            `relative transition-all duration-300 hover:text-green-600 ${
-                                                isActive ? "text-green-600" : ""
+                                            `relative transition-all duration-300 hover:text-green-600 ${isActive ? "text-green-600" : ""
                                             }`
                                         }
                                         onClick={closeMenu}  // Close menu when clicked

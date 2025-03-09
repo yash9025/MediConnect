@@ -1,46 +1,52 @@
-import React, { useState, useContext } from 'react';
-import { AdminContext } from '../context/AdminContext';
-import axios from 'axios'; //Axios is a popular JavaScript library used to make HTTP requests from the browser and Node.js. It is commonly used in web applications to fetch data from APIs, send data to servers, and handle HTTP operations in an easier and more readable way compared to the built-in fetch API.
-import { toast } from 'react-toastify'; //React Toastify is a popular React library that helps display beautiful and customizable toast notifications in your app. 
-import { DoctorContext } from '../context/DoctorContext';
+import React, { useState, useContext, useEffect } from "react";
+import { AdminContext } from "../context/AdminContext";
+import axios from "axios";
+import { toast } from "react-toastify";
+import { DoctorContext } from "../context/DoctorContext";
 
 const Login = () => {
-    const [state, setState] = useState('Admin');
-    const [email, setEmail] = useState('');
-    const [password, setPassword] = useState('');
+    const [state, setState] = useState("Admin");
     const { setAToken, backendUrl } = useContext(AdminContext);
-    const { setDToken} = useContext(DoctorContext);
+    const { setDToken } = useContext(DoctorContext);
 
-   const onSubmitHandler = async (event) => {
-    event.preventDefault();
+    // Load saved email & password or set default values
+    const [email, setEmail] = useState(localStorage.getItem("savedEmail") || "admin@example.com");
+    const [password, setPassword] = useState(localStorage.getItem("savedPassword") || "password123");
 
-    try {
-        if (state === "Admin") {
-            const { data } = await axios.post(backendUrl + "/api/admin/login", { email, password });
+    // Update localStorage when email or password changes
+    useEffect(() => {
+        localStorage.setItem("savedEmail", email);
+        localStorage.setItem("savedPassword", password);
+    }, [email, password]);
 
-            if (data.success) {
-                localStorage.setItem('aToken',data.token); //when reload the webpage then admin will be logged in using this localstorage token
-                setAToken(data.token);
+    const onSubmitHandler = async (event) => {
+        event.preventDefault();
+
+        try {
+            if (state === "Admin") {
+                const { data } = await axios.post(backendUrl + "/api/admin/login", { email, password });
+
+                if (data.success) {
+                    localStorage.setItem("aToken", data.token);
+                    setAToken(data.token);
+                    toast.success("Admin logged in!");
+                } else {
+                    toast.error(data.message);
+                }
             } else {
-                toast.error(data.message);
+                const { data } = await axios.post(backendUrl + "/api/doctor/login", { email, password });
+                if (data.success) {
+                    localStorage.setItem("dToken", data.token);
+                    setDToken(data.token);
+                    toast.success("Doctor logged in!");
+                } else {
+                    toast.error(data.message);
+                }
             }
-        } else{
-
-            const {data} = await axios.post(backendUrl  + '/api/doctor/login' , {email,password})
-            if (data.success) {
-                localStorage.setItem('dToken',data.token); //when reload the webpage then admin will be logged in using this localstorage token
-                setDToken(data.token);
-                console.log(data.token);
-                
-            } else {
-                toast.error(data.message);
-            }
+        } catch (error) {
+            toast.error("Login failed. Please check your credentials.");
         }
-    } catch (error) {
-        
-    }
-};
-
+    };
 
     return (
         <div className="flex justify-center items-center min-h-screen bg-gray-100">
@@ -79,10 +85,10 @@ const Login = () => {
                 </button>
 
                 <p className="mt-4 text-center text-gray-700">
-                    {state === 'Admin' ? 'Doctor' : 'Admin'} Login?
+                    {state === "Admin" ? "Doctor" : "Admin"} Login?
                     <span
                         className="text-blue-600 cursor-pointer ml-1 hover:underline"
-                        onClick={() => setState(state === 'Admin' ? 'Doctor' : 'Admin')}
+                        onClick={() => setState(state === "Admin" ? "Doctor" : "Admin")}
                     >
                         Click here
                     </span>
