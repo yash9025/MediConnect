@@ -212,6 +212,16 @@ const Navbar = () => {
                                         Contact
                                     </NavLink>
                                 </li>
+                                <li>
+                                    <a
+                                        href="https://mediconnect-admin-zi16.onrender.com"
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="bg-green-600 text-white px-4 py-2 rounded-full text-sm hover:bg-green-700 transition-all duration-200"
+                                    >
+                                        Admin Panel
+                                    </a>
+                                </li>
                             </ul>
                         </div>
                     </div>
