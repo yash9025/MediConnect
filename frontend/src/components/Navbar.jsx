@@ -28,7 +28,7 @@ const Navbar = () => {
     };
 
     return (
-        <div className="ml-4 flex items-center justify-between py-2 px-4 bg-white shadow-md lg:px-16">
+        <div className="ml-0 flex items-center justify-between py-2 px-4 bg-white shadow-md lg:px-16">
             {/* Clickable Logo */}
             <NavLink to="/">
                 <img className="w-32 md:w-36 h-auto cursor-pointer scale-125" src={assets.logo} alt="Logo" />
