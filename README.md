@@ -6,14 +6,12 @@ MediConnect is a doctor booking website designed to streamline the appointment s
 
 ## Table of Contents  
 
-- #features
-- #tech-stack  
-- #installation--setup  
-- #environment-variables  
-- #usage  
-- #folder-structure  
-- #contributing  
-- #license  
+- [Features](#features)  
+- [Tech Stack](#tech-stack)  
+- [Installation & Setup](#installation--setup)  
+- [Usage](#usage)   
+- [Contributing](#contributing)  
+
 
 ---
 
@@ -30,15 +28,16 @@ MediConnect is a doctor booking website designed to streamline the appointment s
 
 ---
 
+
 ## Tech Stack  
 
-- Frontend: React (Vite), Tailwind CSS  
-- Backend: Node.js, Express.js  
-- Database: MongoDB  
-- Authentication: JWT  
-- State Management: Redux   
-- Deployment: Render  
-
+- **Frontend**: React (Vite), Tailwind CSS  
+- **Backend**: Node.js, Express.js  
+- **Database**: MongoDB  
+- **Authentication**: JWT  
+- **State Management**: Redux  
+- **Deployment**: Render
+- **Chatbot**: AI-powered recommendation system (Upcoming)  
 ---
 
 ## Installation & Setup  
