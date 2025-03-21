@@ -1,7 +1,15 @@
 import React from "react";
+import { useNavigate } from "react-router-dom";
 import { assets } from "../assets/assets";
 
 const Footer = () => {
+  const navigate = useNavigate();
+
+  const handleNavigation = (path) => {
+    navigate(path);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
   return (
     <footer className="relative bg-gray-50 text-white overflow-hidden py-12 w-full mx-auto rounded-none shadow-lg">
       {/* Floating Background Elements */}
@@ -21,10 +29,10 @@ const Footer = () => {
         <div className="flex flex-col items-center lg:items-start">
           <p className="text-lg font-bold text-gray-800 mb-3">Company</p>
           <ul className="text-gray-600 space-y-1">
-            <li className="hover:text-yellow-500 cursor-pointer">Home</li>
-            <li className="hover:text-yellow-500 cursor-pointer">About</li>
-            <li className="hover:text-yellow-500 cursor-pointer">Contact Us</li>
-            <li className="hover:text-yellow-500 cursor-pointer">Privacy Policy</li>
+            <li className="hover:text-yellow-500 cursor-pointer" onClick={() => handleNavigation("/")}>Home</li>
+            <li className="hover:text-yellow-500 cursor-pointer" onClick={() => handleNavigation("/about")}>About</li>
+            <li className="hover:text-yellow-500 cursor-pointer" onClick={() => handleNavigation("/contact")}>Contact Us</li>
+            <li className="hover:text-yellow-500 cursor-pointer" onClick={() => handleNavigation("/contact")}>Privacy Policy</li>
           </ul>
         </div>
 

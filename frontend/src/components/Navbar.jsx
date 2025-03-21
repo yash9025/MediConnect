@@ -13,6 +13,7 @@ const Navbar = () => {
     const logout = () => {
         setToken(false)
         localStorage.removeItem('token')
+        navigate('/')
     }
 
     const [showProfileMenu, setShowProfileMenu] = useState(false);

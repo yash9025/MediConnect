@@ -1,10 +1,10 @@
-import React from 'react'
-import { assets } from '../assets/assets'
-import { useNavigate } from 'react-router-dom'
-
+import React from 'react';
+import { assets } from '../assets/assets';
+import { useNavigate } from 'react-router-dom';
 
 const Banner = () => {
-    const navigate = useNavigate()
+    const navigate = useNavigate();
+    const isLoggedIn = localStorage.getItem('token'); // Replace with actual auth logic
 
     return (
         <div className="relative bg-gradient-to-br from-blue-600 to-green-500 text-white overflow-hidden py-12 w-full mx-auto rounded-none shadow-lg">
@@ -21,9 +21,15 @@ const Banner = () => {
                     <p className="text-lg md:text-xl text-gray-200 leading-relaxed mb-6">
                         Consult Top-Rated Doctors Anytime, Anywhere.
                     </p>
-                    <button onClick={() => { navigate('/login'); scrollTo(0, 0) }} className="bg-white text-blue-600 font-semibold py-3 px-6 rounded-full shadow-md transition-all duration-300 cursor-pointer transform hover:scale-105 hover:bg-gray-200">
-                        Create Account
-                    </button>
+                    {isLoggedIn ? (
+                        <button onClick={() => {navigate('/doctors'); scrollTo(0,0); }} className="bg-white text-blue-600 font-semibold py-3 px-6 rounded-full shadow-md transition-all duration-300 cursor-pointer transform hover:scale-105 hover:bg-gray-200">
+                            Book Appointment
+                        </button>
+                    ) : (
+                        <button onClick={() => { navigate('/login'); scrollTo(0, 0); }} className="bg-white text-blue-600 font-semibold py-3 px-6 rounded-full shadow-md transition-all duration-300 cursor-pointer transform hover:scale-105 hover:bg-gray-200">
+                            Create Account
+                        </button>
+                    )}
                 </div>
 
                 {/* Right Side */}
@@ -36,10 +42,7 @@ const Banner = () => {
                 </div>
             </div>
         </div>
+    );
+};
 
-
-
-    )
-}
-
-export default Banner
+export default Banner;

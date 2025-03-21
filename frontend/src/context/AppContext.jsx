@@ -1,6 +1,3 @@
-//The main reason to use React Context is to avoid prop-drilling, which is when you pass props down through many layers of components to reach the component that needs the data.
-//Instead of passing the doctors data through every component in the hierarchy, you use AppContext to make doctors accessible to any component that consumes the context.
-
 import { createContext, useEffect, useState } from "react";
 import axios from 'axios';
 import { toast } from 'react-toastify';
@@ -8,16 +5,15 @@ import { toast } from 'react-toastify';
 export const AppContext = createContext(null);
 
 const AppContextProvider = (props) => {
-
     const currencySymbol = '$';
     const backendUrl = import.meta.env.VITE_BACKEND_URL;
+    
     const [doctors, setDoctors] = useState([]);
-    const [token,setToken] = useState(localStorage.getItem('token')?localStorage.getItem('token'):false); //if local storage has token then use it . this is the logic that when a logged in user reloads it should be logged in
-    const [userData , setUserData] = useState(false);
+    const [token, setToken] = useState(localStorage.getItem('token') || '');
+    const [userData, setUserData] = useState(null);
 
     const getDoctorData = async () => {
         try {
-
             const { data } = await axios.get(backendUrl + '/api/doctor/list');
             if (data.success) {
                 console.log("Fetched Doctors Data:", data.doctors);
@@ -25,59 +21,57 @@ const AppContextProvider = (props) => {
             } else {
                 toast.error(data.message);
             }
-
         } catch (error) {
-            console.log(error);
-            toast.error(error.message);
+            console.error(error);
+            toast.error("Failed to fetch doctors.");
         }
-    }
+    };
 
     const loadUserProfileData = async () => {
-        
-
         try {
-
-            const { data } = await axios.get(backendUrl + '/api/user/get-profile' , {headers:{token}});
+            const { data } = await axios.get(backendUrl + '/api/user/get-profile', { headers: { token } });
             if (data.success) {
                 setUserData(data.userData);
-            }else{
+            } else {
                 toast.error(data.message);
             }
-            
         } catch (error) {
-            console.log(error);
-            toast.error(error.message);
+            console.error(error);
+            toast.error("Failed to fetch user data.");
         }
-    }
+    };
 
-    
-    const value = {
-        doctors,getDoctorData,
-        currencySymbol,
-        token,setToken,
-        backendUrl,
-        userData,setUserData,
-        loadUserProfileData
-    }
+    // 🔹 New Logout Function
+    const logout = () => {
+        localStorage.removeItem('token');
+        setToken(''); // ✅ This ensures React detects the change
+        setUserData(null); // ✅ Clears user data
+    };
 
     useEffect(() => {
-        getDoctorData()
-    }, [])
+        getDoctorData();
+    }, []);
 
     useEffect(() => {
-        if(token){
-            loadUserProfileData()
-        }else{
-            setUserData(false);
+        if (token) {
+            loadUserProfileData();
+        } else {
+            setUserData(null);
         }
-       
-    }, [token])
+    }, [token]);
 
     return (
-        <AppContext.Provider value={value}>
+        <AppContext.Provider value={{
+            doctors, getDoctorData,
+            currencySymbol,
+            token, setToken, logout, // 
+            backendUrl,
+            userData, setUserData,
+            loadUserProfileData
+        }}>
             {props.children}
         </AppContext.Provider>
-    )
-}
+    );
+};
 
 export default AppContextProvider;
