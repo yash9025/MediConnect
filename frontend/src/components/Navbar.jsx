@@ -10,6 +10,7 @@ const Navbar = () => {
 
     const [showMenu, setShowMenu] = useState(false);
 
+
     const logout = () => {
         setToken(false)
         localStorage.removeItem('token')
@@ -97,47 +98,47 @@ const Navbar = () => {
             {/* Buttons Section */}
             <div className="flex items-center space-x-3">
                 {token && userData ? (
-                    <div
-                        className="relative flex items-center gap-2 cursor-pointer group"
-                        onMouseEnter={() => setShowProfileMenu(true)}
-                        onMouseLeave={() => setShowProfileMenu(false)}
-                    >
-                        {/* Profile Image */}
-                        <img
-                            className="w-9 h-9 rounded-full border border-green-400 shadow-sm transition-transform duration-300 hover:scale-105"
-                            src={userData.image}
-                            alt="Profile"
-                        />
+                    <div className="relative group inline-block text-left">
+                        {/* Trigger: Profile + Icon */}
+                        <div className="flex items-center space-x-2 cursor-pointer">
+                            <img
+                                className="w-9 h-9 rounded-full border border-green-400 shadow-sm transition-transform duration-300 group-hover:scale-105"
+                                src={userData.image}
+                                alt="Profile"
+                            />
+                            <img
+                                className="w-3 transform transition-transform duration-300 group-hover:rotate-180"
+                                src={assets.dropdown_icon}
+                                alt="Dropdown"
+                            />
+                        </div>
 
-                        {/* Dropdown Icon */}
-                        <img className="w-3 transition-transform duration-300 group-hover:rotate-180" src={assets.dropdown_icon} alt="Dropdown" />
-
-                        {/* Dropdown Menu (Visible on Hover) */}
-                        {showProfileMenu && (
-                            <div className="absolute top-10 right-0 w-40 bg-white shadow-md rounded-md text-gray-700 text-sm font-medium z-20 transition-opacity duration-300 opacity-100">
-                                <div className="p-2 space-y-1">
-                                    <p
-                                        onClick={() => navigate("/my-profile")}
-                                        className="hover:bg-gray-100 p-2 rounded cursor-pointer"
-                                    >
-                                        My Profile
-                                    </p>
-                                    <p
-                                        onClick={() => navigate("/my-appointments")}
-                                        className="hover:bg-gray-100 p-2 rounded cursor-pointer"
-                                    >
-                                        My Appointments
-                                    </p>
-                                    <p
-                                        onClick={logout}
-                                        className="hover:bg-red-100 text-red-500 p-2 rounded cursor-pointer"
-                                    >
-                                        Logout
-                                    </p>
-                                </div>
+                        {/* Dropdown Menu */}
+                        <div className="absolute right-0 top-full mt-1 w-44 bg-white shadow-md rounded-md text-gray-700 text-sm font-medium z-20 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200">
+                            <div className="p-2 space-y-1">
+                                <p
+                                    onClick={() => navigate("/my-profile")}
+                                    className="hover:bg-gray-100 p-2 rounded cursor-pointer"
+                                >
+                                    My Profile
+                                </p>
+                                <p
+                                    onClick={() => navigate("/my-appointments")}
+                                    className="hover:bg-gray-100 p-2 rounded cursor-pointer"
+                                >
+                                    My Appointments
+                                </p>
+                                <p
+                                    onClick={logout}
+                                    className="hover:bg-red-100 text-red-500 p-2 rounded cursor-pointer"
+                                >
+                                    Logout
+                                </p>
                             </div>
-                        )}
+                        </div>
                     </div>
+
+
                 ) : (
                     <button
                         onClick={() => navigate("/login")}
