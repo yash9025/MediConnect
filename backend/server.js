@@ -23,4 +23,9 @@ app.use('/api/doctor' , doctorRouter);
 app.use('/api/user' , userRouter);
 
 app.get('/', (req, res) => res.send('Api Working')); //get request pe '/' pe jake hello world print krega
+app.get('/ping', (req, res) => {
+  console.log(`[${new Date().toISOString()}] Ping received`);
+  res.status(200).send('pong');
+});
+
 app.listen(port, () => console.log(`Listening on localhost:${port}`)); //port pe server start hoga or console me print hoga ki server start hua hai
