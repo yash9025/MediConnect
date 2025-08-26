@@ -55,6 +55,8 @@ MediConnect is a doctor booking website designed to streamline the appointment s
 4. Start the Development Server
    npm run dev
 
+---
+
  ## Usage
  
  - Register/Login as a Doctor or Patient
