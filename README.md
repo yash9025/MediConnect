@@ -62,8 +62,12 @@ MediConnect is a doctor booking website designed to streamline the appointment s
  - Patients can book appointments and view doctor details
  - Secure authentication for all users
 
+ ---
+
   ## Contributing
   Contributions are welcome! Feel free to fork this repository and submit a pull request.
+
+---
 
   ## Live Demo
   https://mediconnect-frontend-27zg.onrender.com/
