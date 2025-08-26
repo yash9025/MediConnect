@@ -44,7 +44,7 @@ MediConnect is a doctor booking website designed to streamline the appointment s
 
 1. Clone the Repository  
    ```bash
-   git clone https://github.com/yourusername/mediconnect.git
+   [git clone https://github.com/yourusername/mediconnect.git](https://github.com/yash9025/MediConnect.git)
    cd mediconnect
 2. Install Dependencies
     npm install
