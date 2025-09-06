@@ -44,8 +44,8 @@ const AppContextProvider = (props) => {
     // 🔹 New Logout Function
     const logout = () => {
         localStorage.removeItem('token');
-        setToken(''); // ✅ This ensures React detects the change
-        setUserData(null); // ✅ Clears user data
+        setToken(''); // This ensures React detects the change
+        setUserData(null); //  Clears user data
     };
 
     useEffect(() => {
