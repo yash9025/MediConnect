@@ -2,6 +2,7 @@ import React, { useState, useContext, useEffect } from "react";
 import { AdminContext } from "../context/AdminContext";
 import axios from "axios";
 import { toast } from "react-toastify";
+import { useNavigate } from "react-router-dom";
 import { DoctorContext } from "../context/DoctorContext";
 
 const Login = () => {
@@ -9,6 +10,7 @@ const Login = () => {
     const { setAToken, backendUrl } = useContext(AdminContext);
     const { setDToken } = useContext(DoctorContext);
 
+    const navigate = useNavigate();
     // Load saved email & password or set default values
     const [email, setEmail] = useState(localStorage.getItem("savedEmail") || "admin@mediconnect.com");
     const [password, setPassword] = useState(localStorage.getItem("savedPassword") || "yash@994");
@@ -42,6 +44,7 @@ const Login = () => {
                     localStorage.setItem("aToken", data.token);
                     setAToken(data.token);
                     toast.success("Admin logged in!");
+                    navigate("/admin-dashboard");
                 } else {
                     toast.error(data.message);
                 }
@@ -51,6 +54,7 @@ const Login = () => {
                     localStorage.setItem("dToken", data.token);
                     setDToken(data.token);
                     toast.success("Doctor logged in!");
+                    navigate("/doctor-dashboard");
                 } else {
                     toast.error(data.message);
                 }
