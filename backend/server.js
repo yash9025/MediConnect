@@ -17,17 +17,8 @@ connectCloudinary();
 // Middleware
 app.use(express.json());
 
-// CORS configuration
-const allowedOrigins = [
-  "https://mediconnect-treo.onrender.com"
-];
-
-app.use(cors({
-  origin: allowedOrigins,
-  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization"],
-  credentials: true,
-}));
+//  Enable CORS globally for all routes
+app.use(cors()); // no options = allow all origins
 
 // API routes
 app.use('/api/admin', adminRouter);
