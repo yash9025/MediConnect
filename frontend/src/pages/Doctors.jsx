@@ -7,6 +7,9 @@ const Doctors = () => {
   const { doctors } = useContext(AppContext);
   const navigate = useNavigate();
   const doctorsRef = useRef(null);
+  
+  // STEP 1: Create a ref to hold a map of all card nodes
+  const cardRefs = useRef(new Map());
 
   const [selectedSpeciality, setSelectedSpeciality] = useState(speciality || "");
   const [selectedDoctor, setSelectedDoctor] = useState(null);
@@ -31,8 +34,24 @@ const Doctors = () => {
     }, 300);
   };
 
+  // STEP 3: Update the handler to use the ref map
+  // It no longer needs the 'event' parameter
   const handleReadMoreClick = (doctor) => {
-    setSelectedDoctor(selectedDoctor?._id === doctor._id ? null : doctor);
+    const isOpening = selectedDoctor?._id !== doctor._id;
+    setSelectedDoctor(isOpening ? doctor : null);
+
+    if (isOpening) {
+      setTimeout(() => {
+        // Get the specific card's node from our map
+        const node = cardRefs.current.get(doctor._id);
+        if (node) {
+          node.scrollIntoView({
+            behavior: "smooth",
+            block: "start",
+          });
+        }
+      }, 100);
+    }
   };
 
   const handleMoreClick = () => {
@@ -45,7 +64,7 @@ const Doctors = () => {
       <div className="w-full md:w-1/4 bg-gray-200 p-6 rounded-lg shadow-lg md:sticky md:top-20 h-fit text-center md:text-left md:self-start">
         <h2 className="text-2xl font-semibold text-gray-800 mb-6">Specialities</h2>
         <ul className="space-y-4">
-          {["General physician", "Gynecologist", "Dermatologist", "Pediatricians", "Neurologist", ""].map((spec) => (
+          {["General physician", "Gynecologist", "Dermatologist", "Pediatricians", "Neurologist", "All"].map((spec) => (
             <li
               key={spec}
               className={`cursor-pointer text-lg ${
@@ -53,7 +72,7 @@ const Doctors = () => {
                   ? "text-blue-600 font-semibold"
                   : "text-gray-700"
               } hover:text-blue-500 transition-all text-center md:text-left`}
-              onClick={() => handleSpecialityClick(spec)}
+              onClick={() => handleSpecialityClick(spec === "All" ? "" : spec)}
             >
               {spec}
             </li>
@@ -79,21 +98,28 @@ const Doctors = () => {
           </h2>
         )}
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 items-start">
           {filteredDoctors.length === 0 ? (
-            <p className="text-center text-gray-600">
+            <p className="text-center text-gray-600 col-span-full">
               No doctors found for this speciality.
             </p>
           ) : (
             filteredDoctors.map((doctor) => {
-              let readMoreText =
-                selectedDoctor?._id === doctor._id ? "Read Less" : "Read More";
-              let doctorDetailsClass =
-                selectedDoctor?._id === doctor._id ? "max-h-screen" : "max-h-0";
+              const isSelected = selectedDoctor?._id === doctor._id;
+              const readMoreText = isSelected ? "Read Less" : "Read More";
+              const doctorDetailsClass = isSelected ? "max-h-screen" : "max-h-0";
 
               return (
                 <div
                   key={doctor._id}
+                  // STEP 2: Assign the node to our ref map
+                  ref={(node) => {
+                    if (node) {
+                      cardRefs.current.set(doctor._id, node);
+                    } else {
+                      cardRefs.current.delete(doctor._id);
+                    }
+                  }}
                   className="doctor-card bg-white p-6 rounded-lg shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:scale-105 flex flex-col"
                 >
                   <img
@@ -110,36 +136,31 @@ const Doctors = () => {
                   </p>
 
                   <div className="doctor-buttons mb-4 flex flex-col gap-3 mt-auto">
-                    {/* Book Now / Not Available Button */}
                     <button
                       onClick={() =>
                         doctor.available && navigate(`/appointment/${doctor._id}`)
                       }
                       disabled={!doctor.available}
-                      className={`px-6 py-2 rounded-full text-sm transition-all duration-200 cursor-pointer ${
+                      className={`px-6 py-2 rounded-full text-sm transition-all duration-200 ${
                         doctor.available
-                          ? "bg-blue-600 text-white hover:bg-blue-700"
+                          ? "bg-blue-600 text-white hover:bg-blue-700 cursor-pointer"
                           : "bg-red-500 text-white cursor-not-allowed"
                       }`}
                     >
                       {doctor.available ? "Book Now" : "Not Available"}
                     </button>
 
-                    {/* Read More Button */}
                     <button
                       className="readmore-btn bg-gray-200 text-gray-700 px-6 py-2 rounded-full text-sm hover:bg-gray-300 transition-all duration-200 cursor-pointer"
+                      // Note: We no longer pass the event 'e'
                       onClick={() => handleReadMoreClick(doctor)}
                     >
                       {readMoreText}
                     </button>
                   </div>
 
-                  {/* Expanded Doctor Details */}
                   <div
                     className={`doctor-details overflow-hidden transition-all duration-500 ease-in-out ${doctorDetailsClass}`}
-                    style={{
-                      transitionProperty: "max-height", // Smooth expansion
-                    }}
                   >
                     <div className="bg-gray-50 p-4 rounded-lg mt-4">
                       <h4 className="text-lg font-semibold text-gray-800 mb-2">
