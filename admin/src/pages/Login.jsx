@@ -11,7 +11,8 @@ const Login = () => {
   const { setDToken } = useContext(DoctorContext);
 
   const navigate = useNavigate();
-  // Load saved email & password or set default values
+
+  // Load saved credentials or set defaults
   const [email, setEmail] = useState(
     localStorage.getItem("savedEmail") || "admin@mediconnect.com"
   );
@@ -19,7 +20,6 @@ const Login = () => {
     localStorage.getItem("savedPassword") || "yash@994"
   );
 
-  // Update localStorage when email or password changes
   useEffect(() => {
     localStorage.setItem("savedEmail", email);
     localStorage.setItem("savedPassword", password);
@@ -39,7 +39,6 @@ const Login = () => {
 
   const onSubmitHandler = async (event) => {
     event.preventDefault();
-
     try {
       if (state === "Admin") {
         const { data } = await axios.post(`${backendUrl}/api/admin/login`, {
@@ -48,19 +47,11 @@ const Login = () => {
         });
 
         if (data.success) {
-          // Save token in localStorage and update context/state
           localStorage.setItem("aToken", data.token);
-          setAToken(data.token); // context/state
-
+          setAToken(data.token);
           toast.success("Admin logged in!");
-
-          // Navigate after tiny delay to ensure state updates
-          setTimeout(() => {
-            navigate("/admin-dashboard");
-          }, 50);
-        } else {
-          toast.error(data.message || "Login failed.");
-        }
+          setTimeout(() => navigate("/admin-dashboard"), 50);
+        } else toast.error(data.message || "Login failed.");
       } else {
         const { data } = await axios.post(`${backendUrl}/api/doctor/login`, {
           email,
@@ -69,16 +60,10 @@ const Login = () => {
 
         if (data.success) {
           localStorage.setItem("dToken", data.token);
-          setDToken(data.token); // context/state
-
+          setDToken(data.token);
           toast.success("Doctor logged in!");
-
-          setTimeout(() => {
-            navigate("/doctor-dashboard");
-          }, 50);
-        } else {
-          toast.error(data.message || "Login failed.");
-        }
+          setTimeout(() => navigate("/doctor-dashboard"), 50);
+        } else toast.error(data.message || "Login failed.");
       }
     } catch (error) {
       console.error(error);
@@ -136,6 +121,24 @@ const Login = () => {
             Click here
           </span>
         </p>
+
+        {/* 🔹 Display test credentials for HR */}
+        <div className="mt-4 text-sm text-gray-600 bg-gray-50 border rounded-lg p-2">
+          <p className="font-semibold text-center mb-1">
+            Test Credentials ({state})
+          </p>
+          {state === "Admin" ? (
+            <>
+              <p>Email: <span className="font-mono">admin@mediconnect.com</span></p>
+              <p>Password: <span className="font-mono">yash@994</span></p>
+            </>
+          ) : (
+            <>
+              <p>Email: <span className="font-mono">richard@mediconnect.com</span></p>
+              <p>Password: <span className="font-mono">12345678</span></p>
+            </>
+          )}
+        </div>
       </form>
     </div>
   );
