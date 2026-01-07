@@ -1,4 +1,4 @@
-import React, { useContext, useEffect } from "react";
+import  { useContext, useEffect } from "react";
 import { AdminContext } from "../../context/AdminContext";
 import { assets } from "../../assets/assets";
 import { AppContext } from "../../context/AppContext";
@@ -16,7 +16,9 @@ const AdminDashboard = () => {
   console.log("Dash Data:", dashData);
 
   return dashData && (
-    <div className="md:mt-[90px] mt-20 p-8 bg-white min-h-screen md:ml-[250px] ml-9 transition-all duration-300 w-full">
+
+    <div className="md:mt-[90px] mt-20 p-8 bg-white min-h-screen md:ml-[250px] ml-16 transition-all duration-300 w-full">
+      
       {/* Stats Section */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-8 mb-8">
         {[
@@ -49,29 +51,29 @@ const AdminDashboard = () => {
           {dashData.latestAppointments.map((appointment, index) => (
             <div
               key={index}
-              className="flex items-center justify-between bg-gray-100 p-4 rounded-lg shadow-sm hover:shadow-md transition"
+              className="flex flex-col sm:flex-row sm:items-center justify-between bg-gray-100 p-4 rounded-lg shadow-sm hover:shadow-md transition gap-4"
             >
-              {/* Doctor Image */}
-              <div className="flex items-center space-x-4">
+              {/* Doctor Image & Details */}
+              <div className="flex items-center space-x-4 w-full sm:w-auto">
                 <img
                   src={appointment.docData.image}
                   alt={appointment.docData.name}
-                  className="w-16 h-16 rounded-full object-cover border border-gray-300"
+                  className="w-16 h-16 rounded-full object-cover border border-gray-300 shrink-0"
                 />
 
-                {/* Doctor & Appointment Details */}
-                <div>
-                  <p className="text-lg font-medium text-gray-800">{appointment.docData.name}</p>
+                <div className="min-w-0">
+                  <p className="text-lg font-medium text-gray-800 truncate">{appointment.docData.name}</p>
                   <p className="text-sm text-gray-600">Booking for {slotDateFormat(appointment.slotDate)}</p>
                 </div>
               </div>
 
               {/* Cancel Button */}
-              {appointment.cancelled ? (
-                <p className="text-red-400 font-medium">Cancelled</p>
-              ) : appointment.isCompleted
-                ? <p className="text-green-400 font-medium">Completed</p>
-                : (
+              <div className="flex justify-end w-full sm:w-auto">
+                {appointment.cancelled ? (
+                  <p className="text-red-400 font-medium">Cancelled</p>
+                ) : appointment.isCompleted ? (
+                  <p className="text-green-400 font-medium">Completed</p>
+                ) : (
                   <button
                     className="cursor-pointer bg-red-100 text-red-500 rounded-full p-3 hover:bg-red-200 transition"
                     onClick={() => cancelAppointment(appointment._id)}
@@ -83,6 +85,7 @@ const AdminDashboard = () => {
                     />
                   </button>
                 )}
+              </div>
             </div>
           ))}
         </div>

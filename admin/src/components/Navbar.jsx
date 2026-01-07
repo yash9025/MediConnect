@@ -20,19 +20,19 @@ const Navbar = () => {
     }
 
     return (
-        <div className="bg-white text-gray-800 py-3 px-12 flex justify-between items-center shadow-md fixed w-full top-0 z-50">
+        <div className="bg-white text-gray-800 py-3 px-4 sm:px-12 flex justify-between items-center shadow-md fixed w-full top-0 z-50">
             {/* Left Section - Logo & Admin Panel Label with More Spacing */}
             { aToken ? (
-                <div className="flex items-center space-x-6 ml-4">
-                <img src={assets.admin_logo} alt="Admin Logo" className="h-16 object-contain scale-125" />
-                <span className="text-[10px] font-medium bg-green-400 text-gray-700 px-2 py-1 rounded-md shadow-sm border border-gray-300">
+                <div className="flex items-center gap-2 sm:space-x-6 ml-0 sm:ml-4">
+                <img src={assets.admin_logo} alt="Admin Logo" className="h-10 sm:h-16 object-contain scale-110 sm:scale-125" />
+                <span className="text-[10px] sm:text-xs font-medium bg-green-400 text-gray-700 px-2 py-1 rounded-md shadow-sm border border-gray-300 whitespace-nowrap">
                     Admin Panel
                 </span>
             </div>
             ) : (
-                <div className="flex items-center space-x-6 ml-4">
-                <img src={assets.admin_logo} alt="Admin Logo" className="h-16 object-contain scale-125" />
-                <span className="text-[10px] font-medium bg-green-400 text-gray-700 px-2 py-1 rounded-md shadow-sm border border-gray-300">
+                <div className="flex items-center gap-2 sm:space-x-6 ml-0 sm:ml-4">
+                <img src={assets.admin_logo} alt="Admin Logo" className="h-10 sm:h-16 object-contain scale-110 sm:scale-125" />
+                <span className="text-[10px] sm:text-xs font-medium bg-green-400 text-gray-700 px-2 py-1 rounded-md shadow-sm border border-gray-300 whitespace-nowrap">
                     Doctor Panel
                 </span>
             </div>
@@ -40,7 +40,7 @@ const Navbar = () => {
             
 
             {/* Logout Button */}
-            <button onClick={logout} className="bg-blue-500 hover:bg-red-600 text-white px-6 py-2 rounded-md transition shadow-sm text-sm mr-4 cursor-pointer">
+            <button onClick={logout} className="bg-blue-500 hover:bg-red-600 text-white px-4 py-1.5 sm:px-6 sm:py-2 rounded-md transition shadow-sm text-xs sm:text-sm mr-0 sm:mr-4 cursor-pointer">
                 Logout
             </button>
         </div>

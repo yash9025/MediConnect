@@ -1,4 +1,4 @@
-import React, { useContext } from "react";
+import  { useContext } from "react";
 import { useNavigate } from "react-router-dom";
 import { AppContext } from "../context/AppContext";
 import { motion } from "framer-motion";
@@ -14,13 +14,14 @@ const TopDoctors = () => {
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.8, ease: "easeOut" }}
     >
-      {/* Title */}
+
       <h1 className="text-4xl md:text-5xl lg:text-5xl font-extrabold text-center text-gray-900 mb-4">
         Top Doctors To Book
       </h1>
-      <p className="text-lg text-center text-gray-600 mb-6">Some of our best doctors</p>
+      <p className="text-lg text-center text-gray-600 mb-6">
+        Some of our best doctors
+      </p>
 
-      {/* Responsive Grid Layout */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4 md:gap-6">
         {doctors.slice(0, 10).map((item, index) => (
           <motion.div
@@ -31,15 +32,18 @@ const TopDoctors = () => {
             }}
             className="bg-white rounded-2xl shadow-lg overflow-hidden cursor-pointer 
                        w-full sm:w-[180px] md:w-[220px] lg:w-[250px] mx-auto"
-            whileHover={{ scale: 1.05, boxShadow: "0px 10px 20px rgba(0,0,0,0.15)" }}
+            whileHover={{
+              scale: 1.05,
+              boxShadow: "0px 10px 20px rgba(0,0,0,0.15)",
+            }}
             transition={{ duration: 0.3, ease: "easeOut" }}
           >
             {/* Doctor Image */}
-            <div className="w-full h-40 sm:h-44 md:h-48 bg-gray-100 flex justify-center items-center">
+            <div className="w-full h-40 sm:h-44 md:h-48 bg-gray-100 flex justify-center items-center overflow-hidden rounded-t-2xl">
               <motion.img
                 src={item.image}
                 alt=""
-                className="w-full h-full object-cover rounded-t-2xl"
+                className="w-full h-full object-cover object-top rounded-t-2xl"
                 whileHover={{ scale: 1.1 }}
                 transition={{ duration: 0.3 }}
               />
@@ -49,8 +53,16 @@ const TopDoctors = () => {
             <div className="p-3 text-center">
               {/* Availability Status */}
               <div className="flex items-center justify-center mb-2">
-                <div className={`w-2 h-2 rounded-full mr-2 ${item.available ? "bg-green-500" : "bg-red-500"}`}></div>
-                <p className={`text-sm font-semibold ${item.available ? "text-green-600" : "text-red-500"}`}>
+                <div
+                  className={`w-2 h-2 rounded-full mr-2 ${
+                    item.available ? "bg-green-500" : "bg-red-500"
+                  }`}
+                ></div>
+                <p
+                  className={`text-sm font-semibold ${
+                    item.available ? "text-green-600" : "text-red-500"
+                  }`}
+                >
                   {item.available ? "Available" : "Not Available"}
                 </p>
               </div>
@@ -63,7 +75,7 @@ const TopDoctors = () => {
         ))}
       </div>
 
-      {/* More Button (Properly Centered) */}
+      {/* More Button */}
       <motion.button
         onClick={() => {
           window.scrollTo({ top: 0, behavior: "smooth" });

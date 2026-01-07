@@ -98,38 +98,41 @@ const Navbar = () => {
             {/* Buttons Section */}
             <div className="flex items-center space-x-3">
                 {token && userData ? (
-                    <div className="relative group inline-block text-left">
+                    <div className="relative inline-block text-left">
                         {/* Trigger: Profile + Icon */}
-                        <div className="flex items-center space-x-2 cursor-pointer">
+                        <div 
+                            className="flex items-center space-x-2 cursor-pointer" 
+                            onClick={() => setShowProfileMenu(!showProfileMenu)}
+                        >
                             <img
-                                className="w-9 h-9 rounded-full border border-green-400 shadow-sm transition-transform duration-300 group-hover:scale-105"
+                                className="w-9 h-9 rounded-full border border-green-400 shadow-sm transition-transform duration-300 hover:scale-105"
                                 src={userData.image}
                                 alt="Profile"
                             />
                             <img
-                                className="w-3 transform transition-transform duration-300 group-hover:rotate-180"
+                                className="w-3 transform transition-transform duration-300"
                                 src={assets.dropdown_icon}
                                 alt="Dropdown"
                             />
                         </div>
 
                         {/* Dropdown Menu */}
-                        <div className="absolute right-0 top-full mt-1 w-44 bg-white shadow-md rounded-md text-gray-700 text-sm font-medium z-20 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200">
+                        <div className={`absolute right-0 top-full mt-1 w-44 bg-white shadow-md rounded-md text-gray-700 text-sm font-medium z-20 transition-all duration-200 ${showProfileMenu ? 'opacity-100 visible' : 'opacity-0 invisible'}`}>
                             <div className="p-2 space-y-1">
                                 <p
-                                    onClick={() => navigate("/my-profile")}
+                                    onClick={() => { navigate("/my-profile"); setShowProfileMenu(false); }}
                                     className="hover:bg-gray-100 p-2 rounded cursor-pointer"
                                 >
                                     My Profile
                                 </p>
                                 <p
-                                    onClick={() => navigate("/my-appointments")}
+                                    onClick={() => { navigate("/my-appointments"); setShowProfileMenu(false); }}
                                     className="hover:bg-gray-100 p-2 rounded cursor-pointer"
                                 >
                                     My Appointments
                                 </p>
                                 <p
-                                    onClick={logout}
+                                    onClick={() => { logout(); setShowProfileMenu(false); }}
                                     className="hover:bg-red-100 text-red-500 p-2 rounded cursor-pointer"
                                 >
                                     Logout

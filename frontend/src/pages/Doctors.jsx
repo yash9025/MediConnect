@@ -1,4 +1,4 @@
-import React, { useContext, useState, useRef } from "react";
+import { useContext, useState, useRef, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { AppContext } from "../context/AppContext";
 
@@ -6,69 +6,67 @@ const Doctors = () => {
   const { speciality } = useParams();
   const { doctors } = useContext(AppContext);
   const navigate = useNavigate();
-  const doctorsRef = useRef(null);
-  
-  // STEP 1: Create a ref to hold a map of all card nodes
-  const cardRefs = useRef(new Map());
 
-  const [selectedSpeciality, setSelectedSpeciality] = useState(speciality || "");
+  const doctorsRef = useRef(null);
+  const cardRefs = useRef(new Map()); // Store refs for individual cards
+
   const [selectedDoctor, setSelectedDoctor] = useState(null);
 
-  const filteredDoctors = selectedSpeciality
+  // Filter doctors based on URL parameter
+  const filteredDoctors = speciality
     ? doctors.filter(
-        (doctor) =>
-          doctor.speciality.toLowerCase() === selectedSpeciality.toLowerCase()
+        (doc) => doc.speciality.toLowerCase() === speciality.toLowerCase()
       )
     : doctors;
 
+  // Scroll to top of list when speciality changes
+  useEffect(() => {
+    if (speciality) {
+      doctorsRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [speciality]);
+
   const handleSpecialityClick = (spec) => {
-    if (selectedSpeciality === spec) {
-      setSelectedSpeciality("");
+    if (speciality === spec) {
       navigate("/doctors");
     } else {
-      setSelectedSpeciality(spec);
       navigate(`/doctors/${spec}`);
     }
-    setTimeout(() => {
-      doctorsRef.current?.scrollIntoView({ behavior: "smooth" });
-    }, 300);
   };
 
-  // STEP 3: Update the handler to use the ref map
-  // It no longer needs the 'event' parameter
   const handleReadMoreClick = (doctor) => {
     const isOpening = selectedDoctor?._id !== doctor._id;
     setSelectedDoctor(isOpening ? doctor : null);
 
     if (isOpening) {
+      // Scroll to specific card after expansion
       setTimeout(() => {
-        // Get the specific card's node from our map
         const node = cardRefs.current.get(doctor._id);
-        if (node) {
-          node.scrollIntoView({
-            behavior: "smooth",
-            block: "start",
-          });
-        }
+        node?.scrollIntoView({ behavior: "smooth", block: "start" });
       }, 100);
     }
-  };
-
-  const handleMoreClick = () => {
-    alert("Coming Soon");
   };
 
   return (
     <div className="container mx-auto p-4 flex flex-col md:flex-row gap-6">
       {/* Left Sidebar */}
       <div className="w-full md:w-1/4 bg-gray-200 p-6 rounded-lg shadow-lg md:sticky md:top-20 h-fit text-center md:text-left md:self-start">
-        <h2 className="text-2xl font-semibold text-gray-800 mb-6">Specialities</h2>
+        <h2 className="text-2xl font-semibold text-gray-800 mb-6">
+          Specialities
+        </h2>
         <ul className="space-y-4">
-          {["General physician", "Gynecologist", "Dermatologist", "Pediatricians", "Neurologist", "All"].map((spec) => (
+          {[
+            "General physician",
+            "Gynecologist",
+            "Dermatologist",
+            "Pediatricians",
+            "Neurologist",
+            "All",
+          ].map((spec) => (
             <li
               key={spec}
               className={`cursor-pointer text-lg ${
-                selectedSpeciality === spec
+                speciality === spec || (!speciality && spec === "All")
                   ? "text-blue-600 font-semibold"
                   : "text-gray-700"
               } hover:text-blue-500 transition-all text-center md:text-left`}
@@ -77,12 +75,6 @@ const Doctors = () => {
               {spec}
             </li>
           ))}
-          <li
-            className="cursor-pointer text-lg text-gray-700 hover:text-blue-500 transition-all text-center md:text-left"
-            onClick={handleMoreClick}
-          >
-            More
-          </li>
         </ul>
       </div>
 
@@ -106,19 +98,15 @@ const Doctors = () => {
           ) : (
             filteredDoctors.map((doctor) => {
               const isSelected = selectedDoctor?._id === doctor._id;
-              const readMoreText = isSelected ? "Read Less" : "Read More";
-              const doctorDetailsClass = isSelected ? "max-h-screen" : "max-h-0";
 
               return (
                 <div
                   key={doctor._id}
-                  // STEP 2: Assign the node to our ref map
+                  // Assign node to Map ref
                   ref={(node) => {
-                    if (node) {
-                      cardRefs.current.set(doctor._id, node);
-                    } else {
-                      cardRefs.current.delete(doctor._id);
-                    }
+                    node
+                      ? cardRefs.current.set(doctor._id, node)
+                      : cardRefs.current.delete(doctor._id);
                   }}
                   className="doctor-card bg-white p-6 rounded-lg shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:scale-105 flex flex-col"
                 >
@@ -130,7 +118,9 @@ const Doctors = () => {
                   <h3 className="text-xl font-bold text-gray-800 mb-2">
                     {doctor.name}
                   </h3>
-                  <p className="text-sm text-gray-600 mb-2">{doctor.speciality}</p>
+                  <p className="text-sm text-gray-600 mb-2">
+                    {doctor.speciality}
+                  </p>
                   <p className="text-sm text-gray-500 mb-4">
                     Experience: {doctor.experience}
                   </p>
@@ -138,7 +128,8 @@ const Doctors = () => {
                   <div className="doctor-buttons mb-4 flex flex-col gap-3 mt-auto">
                     <button
                       onClick={() =>
-                        doctor.available && navigate(`/appointment/${doctor._id}`)
+                        doctor.available &&
+                        navigate(`/appointment/${doctor._id}`)
                       }
                       disabled={!doctor.available}
                       className={`px-6 py-2 rounded-full text-sm transition-all duration-200 ${
@@ -152,21 +143,25 @@ const Doctors = () => {
 
                     <button
                       className="readmore-btn bg-gray-200 text-gray-700 px-6 py-2 rounded-full text-sm hover:bg-gray-300 transition-all duration-200 cursor-pointer"
-                      // Note: We no longer pass the event 'e'
                       onClick={() => handleReadMoreClick(doctor)}
                     >
-                      {readMoreText}
+                      {isSelected ? "Read Less" : "Read More"}
                     </button>
                   </div>
 
+                  {/* Collapsible Details Section */}
                   <div
-                    className={`doctor-details overflow-hidden transition-all duration-500 ease-in-out ${doctorDetailsClass}`}
+                    className={`overflow-hidden transition-all duration-500 ease-in-out ${
+                      isSelected ? "max-h-screen" : "max-h-0"
+                    }`}
                   >
                     <div className="bg-gray-50 p-4 rounded-lg mt-4">
                       <h4 className="text-lg font-semibold text-gray-800 mb-2">
                         About {doctor.name}
                       </h4>
-                      <p className="text-sm text-gray-600 mb-4">{doctor.about}</p>
+                      <p className="text-sm text-gray-600 mb-4">
+                        {doctor.about}
+                      </p>
                       <p className="text-sm text-gray-600 mb-2">
                         Fees: ${doctor.fees}
                       </p>
