@@ -1,17 +1,17 @@
-# MediConnect (Smart Lab Assistant) 🩺⚡  
+# MediConnect (Smart Lab Assistant) 🩺 
 **AI-powered Lab Report Analysis + Specialist Recommendation + Instant Booking**
 
 MediConnect is an **AI-first healthcare platform** that instantly analyzes medical lab reports (PDF) and/or user symptoms, explains the results in **simple language**, recommends the **correct specialist**, and enables **one-click instant booking** with the best available doctors.
 
 ---
 
-## 🚀 Problem Statement
+## Problem Statement
 
-### ✅ Core Problem
+### Core Problem
 Patients struggle to interpret complex medical lab reports and identify the correct specialist, leading to delayed treatment and inefficient booking processes.  
 This platform uses AI to instantly analyze reports, triage urgency, and auto-match patients with the right available doctors for immediate booking.
 
-### 📌 Detailed Problem
+### Detailed Problem
 - Lab reports contain technical jargon and abnormal values that patients can’t understand.
 - Many people panic (Google symptoms) or ignore critical warnings.
 - Even after realizing they need help, patients struggle to decide the right doctor type (e.g., Nephrologist vs Urologist).
@@ -19,7 +19,7 @@ This platform uses AI to instantly analyze reports, triage urgency, and auto-mat
 
 ---
 
-## ✅ Solution Overview
+## Solution Overview
 
 ### MediConnect / Lab Lens: AI-Powered Digital Triage Assistant
 MediConnect bridges the gap between a **Lab Report** and a **Doctor Appointment**:
@@ -44,7 +44,7 @@ MediConnect bridges the gap between a **Lab Report** and a **Doctor Appointment*
 
 
 
-## 🎯 Key Impact
+## Key Impact
 ✅ Reduces time from *report received → doctor visit* from **days to minutes**  
 ✅ Prevents medical escalation via urgency-aware triage  
 ✅ Improves patient confidence and reduces anxiety  
@@ -55,7 +55,7 @@ MediConnect bridges the gap between a **Lab Report** and a **Doctor Appointment*
 ![Flow Chart](imagee.jpg)
 
 
-## 🏗 Architecture & Workflow
+## Architecture & Workflow
 
 ### 1) Input Layer
 - Upload PDF lab report
@@ -83,9 +83,9 @@ MediConnect bridges the gap between a **Lab Report** and a **Doctor Appointment*
 
 ---
 
-## 🔥 Features
+## Features
 
-### 🧠 A. AI Report Analyzer (Gemini Brain)
+###  A. AI Report Analyzer (Gemini Brain)
 - Understands medical correlations beyond keywords
 - Example:  
   `High Sugar + Thirst + Weight Loss → Diabetes risk`
@@ -94,7 +94,7 @@ MediConnect bridges the gap between a **Lab Report** and a **Doctor Appointment*
 
 ---
 
-### 🗂 B. Hybrid File Handling (Error-Resilient)
+###  B. Hybrid File Handling (Error-Resilient)
 To prevent common errors like **fetch failure / missing file**, we implemented a universal file handler.
 
 ✅ Detects where the report exists:
@@ -105,7 +105,7 @@ This makes the platform stable and production-friendly.
 
 ---
 
-### 🏆 C. Smart Doctor Ranking System ("Sorting Hat")
+###  C. Smart Doctor Ranking System ("Sorting Hat")
 Instead of random listing, doctors are ranked using weighted scoring:
 
 **Score Formula**
