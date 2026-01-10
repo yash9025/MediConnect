@@ -72,4 +72,4 @@ MediConnect is a doctor booking website designed to streamline the appointment s
 ---
 
   ## Live Demo
-  https://mediconnect-frontend-27zg.onrender.com/
+  [https://mediconnect-frontend-27zg.onrender.com/](https://mediconnect-wx0o.onrender.com/)
