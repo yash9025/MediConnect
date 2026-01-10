@@ -6,6 +6,8 @@ import connectCloudinary from './config/cloudinary.js';
 import adminRouter from './routes/adminRoute.js';
 import doctorRouter from './routes/doctorRoute.js';
 import userRouter from './routes/userRoute.js';
+import labRoutes from  './routes/labRoutes.js'
+import chatRouter from './routes/chatRoute.js';
 
 const app = express();
 const port = process.env.PORT || 4000;
@@ -24,6 +26,9 @@ app.use(cors()); // no options = allow all origins
 app.use('/api/admin', adminRouter);
 app.use('/api/doctor', doctorRouter);
 app.use('/api/user', userRouter);
+app.use('/api/lab' , labRoutes);
+app.use('/api/chat', chatRouter);
+
 
 // Test routes
 app.get('/', (req, res) => res.send('API Working'));

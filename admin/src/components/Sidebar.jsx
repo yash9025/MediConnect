@@ -101,6 +101,17 @@ const Sidebar = () => {
                         <img src={assets.people_icon} alt="" className="w-6 h-6" />
                         {!isMobile && <p className="font-medium">Profile</p>}
                     </NavLink>
+                    <NavLink
+                        to="/doctor-report"
+                        className={({ isActive }) =>
+                            `flex items-center p-3 rounded-lg transition duration-300 ${
+                                isActive ? 'bg-blue-500 text-white' : 'hover:bg-gray-100'
+                            } ${isMobile ? 'justify-center' : 'space-x-3'}`
+                        }
+                    >
+                        <img src={assets.people_icon} alt="" className="w-6 h-6" />
+                        {!isMobile && <p className="font-medium">Report</p>}
+                    </NavLink>
                 </ul>
             )}
         </div>
