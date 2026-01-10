@@ -45,10 +45,10 @@ MediConnect bridges the gap between a **Lab Report** and a **Doctor Appointment*
 
 
 ## Key Impact
-✅ Reduces time from *report received → doctor visit* from **days to minutes**  
-✅ Prevents medical escalation via urgency-aware triage  
-✅ Improves patient confidence and reduces anxiety  
-✅ Optimizes doctor schedule utilization
+- Reduces time from *report received → doctor visit* from **days to minutes**  
+- Prevents medical escalation via urgency-aware triage  
+- Improves patient confidence and reduces anxiety  
+- Optimizes doctor schedule utilization
 
 ---
 
@@ -90,14 +90,14 @@ MediConnect bridges the gap between a **Lab Report** and a **Doctor Appointment*
 - Example:  
   `High Sugar + Thirst + Weight Loss → Diabetes risk`
 
-✅ Works even if report is missing → falls back to symptom-based analysis.
+Works even if report is missing → falls back to symptom-based analysis.
 
 ---
 
 ###  B. Hybrid File Handling (Error-Resilient)
 To prevent common errors like **fetch failure / missing file**, we implemented a universal file handler.
 
-✅ Detects where the report exists:
+Detects where the report exists:
 - Local disk → `fs.readFileSync`
 - Cloudinary URL → `fetch`
 
