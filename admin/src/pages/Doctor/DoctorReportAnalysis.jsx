@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useContext } from 'react';
+import { useEffect, useState, useContext, useCallback } from 'react';
 import { DoctorContext } from '../../context/DoctorContext';
 import axios from 'axios';
 import { toast } from 'react-toastify';
@@ -13,13 +13,8 @@ const DoctorReportAnalysis = () => {
     const [actionLoading, setActionLoading] = useState({});
 
     // --- 1. Fetch Reports ---
-    useEffect(() => {
-        if (dToken) {
-            fetchReports();
-        }
-    }, [dToken]);
-
-    const fetchReports = async () => {
+    const fetchReports = useCallback(async () => {
+        if (!dToken) return;
         setLoading(true);
         try {
             const { data } = await axios.post(
@@ -29,57 +24,47 @@ const DoctorReportAnalysis = () => {
             );
 
             if (data.success) {
-                setReports(data.reports.reverse());
+                // reverse() used to show newest first
+                setReports([...data.reports].reverse());
             } else {
                 toast.error(data.message);
             }
         } catch (error) {
-            console.error(error);
+            console.error("Fetch Error:", error);
             toast.error("Failed to load reports.");
         } finally {
             setLoading(false);
         }
-    };
+    }, [dToken, backendUrl]);
 
-    // --- 2. Smart PDF Handler (THE FIX) ---
+    useEffect(() => {
+        fetchReports();
+    }, [fetchReports]);
+
+    // --- 2. View PDF Handler ---
     const handleViewPdf = (url) => {
-        console.log("Attempting to open PDF URL:", url); // 🔍 Debug Log
-
-        if (!url) {
-            toast.error("Report URL is missing.");
-            return;
-        }
-
-        // Check if it's a "poisoned" local path (Old data)
-        if (url.startsWith("C:") || url.startsWith("file:") || url.startsWith("uploads\\")) {
-            toast.error("Invalid File Path (Old Data). Please delete this report.");
-            return;
-        }
-
-        // Fix for "Downloading instead of Opening":
-        // If the URL doesn't end in .pdf, we force it open in Google Docs Viewer
-        const isRawCloudinary = url.includes("cloudinary") && !url.toLowerCase().endsWith(".pdf");
+        if (!url) return toast.error("Report URL is missing.");
         
-        if (isRawCloudinary) {
-            // Open in Google Viewer fallback
-            window.open(`https://docs.google.com/viewer?url=${encodeURIComponent(url)}&embedded=true`, '_blank');
-        } else {
-            // Open normally
-            window.open(url, '_blank');
+        const invalidPaths = ["C:", "file:", "uploads\\"];
+        if (invalidPaths.some(path => url.startsWith(path))) {
+            return toast.error("Invalid File Path. Please delete this report.");
         }
+
+        // Use Google Docs viewer fallback for raw Cloudinary links without extensions
+        const isRawCloudinary = url.includes("cloudinary") && !url.toLowerCase().endsWith(".pdf");
+        const finalUrl = isRawCloudinary 
+            ? `https://docs.google.com/viewer?url=${encodeURIComponent(url)}&embedded=true` 
+            : url;
+
+        window.open(finalUrl, '_blank');
     };
 
     // --- 3. Send Advice ---
     const handleSendAdvice = async (reportId) => {
-        const doctorNote = notes[reportId];
-
-        if (!doctorNote || doctorNote.trim() === "") {
-            toast.error("Please add your medical advice before sending.");
-            return;
-        }
+        const doctorNote = notes[reportId]?.trim();
+        if (!doctorNote) return toast.error("Please add advice before sending.");
 
         setActionLoading(prev => ({ ...prev, [reportId]: true }));
-
         try {
             const { data } = await axios.post(
                 `${backendUrl}/api/doctor/send-advice`,
@@ -89,141 +74,129 @@ const DoctorReportAnalysis = () => {
 
             if (data.success) {
                 toast.success("Advice sent successfully!");
+                // Remove the verified report from the view
                 setReports(prev => prev.filter(item => item._id !== reportId));
             } else {
                 toast.error(data.message);
             }
         } catch (error) {
-            console.error(error);
+            console.error("Action Error:", error);
             toast.error("Failed to send advice.");
         } finally {
             setActionLoading(prev => ({ ...prev, [reportId]: false }));
         }
     };
 
-    // --- Styles ---
-    const getUrgencyBadge = (level) => {
-        const styles = {
-            HIGH: 'bg-red-50 text-red-600 border-red-100',
-            MEDIUM: 'bg-amber-50 text-amber-600 border-amber-100',
-            LOW: 'bg-emerald-50 text-emerald-600 border-emerald-100'
+    const getUrgencyBadge = (level = "") => {
+        const colors = {
+            HIGH: 'bg-red-100 text-red-700 border-red-200',
+            MEDIUM: 'bg-amber-100 text-amber-700 border-amber-200',
+            LOW: 'bg-emerald-100 text-emerald-700 border-emerald-200'
         };
-        const style = styles[level?.toUpperCase()] || 'bg-gray-50 text-gray-600';
+        const normalized = level.toUpperCase();
         return (
-            <span className={`text-[10px] font-bold px-2 py-0.5 rounded border ${style}`}>
-                {level}
+            <span className={`text-xs font-bold px-3 py-1 rounded-full border ${colors[normalized] || 'bg-gray-100 text-gray-600'}`}>
+                {level || 'Normal'}
             </span>
         );
     };
 
     return (
-        <div className="ml-16 w-full max-w-4xl p-6 font-sans">
-            
-            {/* Header */}
-            <div className="flex justify-between items-end mb-6">
+        <div className="md:ml-64 pt-24 px-4 sm:px-8 pb-10 min-h-screen bg-gray-50 font-sans">
+            <header className="flex flex-col sm:flex-row justify-between items-start sm:items-end mb-8 gap-4">
                 <div>
-                    <h1 className="text-2xl font-bold text-slate-800">Pending Reports</h1>
-                    <p className="text-slate-500 text-xs">Review AI insights and verify patient results.</p>
+                    <h1 className="text-3xl font-bold text-gray-800 tracking-tight">Pending Reports</h1>
+                    <p className="text-gray-500 text-sm mt-1">Review AI insights and verify patient results.</p>
                 </div>
-                <button onClick={fetchReports} className="text-blue-600 hover:bg-blue-50 p-2 rounded-full transition">
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" />
+                <button 
+                    onClick={fetchReports} 
+                    className="flex items-center gap-2 bg-white text-blue-600 hover:bg-blue-50 px-4 py-2 rounded-lg border border-blue-100 shadow-sm transition-all text-sm font-medium"
+                >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                     </svg>
+                    Refresh
                 </button>
-            </div>
+            </header>
 
-            {/* List Content */}
             {loading ? (
-                <div className="flex justify-center items-center h-40">
-                    <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-600"></div>
+                <div className="flex justify-center items-center h-64">
+                    <div className="animate-spin rounded-full h-10 w-10 border-4 border-blue-500 border-t-transparent" />
                 </div>
             ) : reports.length === 0 ? (
-                <div className="text-center py-12 bg-white rounded-xl border border-dashed border-slate-200">
-                    <p className="text-slate-400 text-sm">No reports pending verification.</p>
+                <div className="flex flex-col items-center justify-center py-20 bg-white rounded-2xl border-2 border-dashed border-gray-200">
+                    <span className="text-5xl mb-4 text-green-500">✓</span>
+                    <p className="text-gray-500 text-lg font-medium">All caught up! No pending reports.</p>
                 </div>
             ) : (
-                <div className="space-y-4">
+                <div className="grid gap-6">
                     {reports.map((report) => (
-                        <div key={report._id} className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden hover:shadow-md transition-all duration-200">
-                            
-                            {/* Card Header */}
-                            <div className="px-4 py-3 flex justify-between items-center bg-slate-50 border-b border-slate-100">
-                                <div className="flex items-center gap-3">
-                                    <div className="w-8 h-8 rounded-full bg-slate-800 text-white flex items-center justify-center font-bold text-xs">
-                                        {report.patientName.charAt(0)}
+                        <article key={report._id} className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-lg transition-all duration-300">
+                            <div className="px-6 py-4 flex flex-wrap justify-between items-center bg-gray-50/50 border-b border-gray-100 gap-4">
+                                <div className="flex items-center gap-4">
+                                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 text-white flex items-center justify-center font-bold text-lg">
+                                        {report.patientName?.charAt(0)}
                                     </div>
-                                    <div className="leading-tight">
-                                        <h3 className="text-sm font-bold text-slate-800">{report.patientName}</h3>
-                                        <span className="text-[10px] text-slate-400 font-mono">ID: {report.userId.slice(-6).toUpperCase()}</span>
+                                    <div>
+                                        <h3 className="text-lg font-bold text-gray-800 leading-none">{report.patientName}</h3>
+                                        <span className="text-xs text-gray-400 font-mono mt-1 block uppercase">ID: {report.userId?.slice(-6)}</span>
                                     </div>
                                 </div>
-                                <div className="flex items-center gap-3">
+                                <div className="flex items-center gap-4">
                                     {getUrgencyBadge(report.aiAnalysis?.urgency)}
-                                    
-                                    {/* 🔴 Button using the Smart Handler */}
                                     <button 
                                         onClick={() => handleViewPdf(report.pdfUrl)} 
-                                        className="text-slate-400 hover:text-blue-600 transition flex items-center gap-1 text-xs font-semibold"
-                                        title="Open PDF"
+                                        className="flex items-center gap-1.5 text-blue-600 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-lg transition font-semibold text-sm"
                                     >
-                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4">
-                                            <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
-                                        </svg>
+                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
                                         View PDF
                                     </button>
                                 </div>
                             </div>
 
-                            {/* Card Body */}
-                            <div className="p-4 flex flex-col gap-4">
-                                {/* AI Insight */}
-                                <div className="bg-blue-50/50 rounded-lg p-3 border border-blue-100">
-                                    <div className="flex items-start gap-2">
-                                        <span className="text-lg mt-0.5">🤖</span>
-                                        <div>
-                                            <p className="text-xs font-bold text-slate-700 uppercase tracking-wide mb-1">
-                                                Suspected: <span className="text-blue-700 normal-case">{report.aiAnalysis?.condition_suspected}</span>
-                                            </p>
-                                            <p className="text-xs text-slate-600 leading-relaxed">
-                                                {report.aiAnalysis?.reasoning}
-                                            </p>
-                                        </div>
+                            <div className="p-6 grid gap-6 lg:grid-cols-2">
+                                <section className="bg-blue-50/60 rounded-xl p-5 border border-blue-100">
+                                    <h4 className="flex items-center gap-2 text-sm font-bold text-blue-800 uppercase tracking-wide mb-3">
+                                        <span>🤖</span> AI Analysis
+                                    </h4>
+                                    <div className="space-y-3">
+                                        <p className="text-sm font-medium text-gray-600">
+                                            <span className="text-xs font-bold text-gray-400 block uppercase">Suspected Condition</span>
+                                            <span className="text-gray-800 font-bold">{report.aiAnalysis?.condition_suspected}</span>
+                                        </p>
+                                        <p className="text-sm text-gray-700 leading-relaxed">
+                                            <span className="text-xs font-bold text-gray-400 block uppercase">AI Reasoning</span>
+                                            {report.aiAnalysis?.reasoning}
+                                        </p>
                                     </div>
-                                </div>
+                                </section>
 
-                                {/* Doctor Action */}
-                                <div>
+                                <section className="flex flex-col">
+                                    <label className="text-sm font-bold text-gray-700 mb-2 flex items-center gap-2">
+                                        <span>🩺</span> Your Clinical Advice
+                                    </label>
                                     <textarea 
-                                        className="w-full h-20 p-3 text-sm text-slate-700 border border-slate-200 rounded-lg focus:ring-2 focus:ring-green-500/20 focus:border-green-500 outline-none resize-none bg-slate-50 focus:bg-white transition placeholder:text-slate-400"
-                                        placeholder="Write diagnosis & prescription..."
+                                        className="flex-1 w-full p-4 text-sm text-gray-800 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none resize-none bg-white transition"
+                                        placeholder="Enter diagnosis, precautions, or next steps..."
+                                        rows="4"
                                         value={notes[report._id] || ""}
                                         onChange={(e) => setNotes({ ...notes, [report._id]: e.target.value })}
-                                    ></textarea>
-                                    
-                                    <div className="flex justify-end items-center gap-3 mt-2">
-                                        <button className="text-xs font-medium text-slate-400 hover:text-red-500 transition">
-                                            Reject
-                                        </button>
+                                    />
+                                    <div className="flex justify-end gap-3 mt-4">
                                         <button 
                                             onClick={() => handleSendAdvice(report._id)}
                                             disabled={actionLoading[report._id]}
-                                            className={`
-                                                flex items-center gap-2 px-4 py-1.5 rounded-lg text-xs font-bold text-white shadow-sm transition-all
-                                                ${actionLoading[report._id] ? 'bg-slate-300 cursor-wait' : 'bg-green-600 hover:bg-green-700 hover:shadow-md'}
-                                            `}
+                                            className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold text-white transition-all shadow-md ${
+                                                actionLoading[report._id] ? 'bg-gray-400 cursor-not-allowed' : 'bg-green-600 hover:bg-green-700 active:scale-95'
+                                            }`}
                                         >
-                                            {actionLoading[report._id] ? (
-                                                <span>Sending...</span>
-                                            ) : (
-                                                <>
-                                                    Verify & Send <span className="text-xs">➔</span>
-                                                </>
-                                            )}
+                                            {actionLoading[report._id] ? 'Sending...' : 'Verify & Send'}
+                                            {!actionLoading[report._id] && <span>➔</span>}
                                         </button>
                                     </div>
-                                </div>
+                                </section>
                             </div>
-                        </div>
+                        </article>
                     ))}
                 </div>
             )}

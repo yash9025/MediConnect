@@ -50,6 +50,7 @@ const Doctors = () => {
   return (
     <div className="container mx-auto p-4 flex flex-col md:flex-row gap-6">
       {/* Left Sidebar */}
+      {/* Left Sidebar */}
       <div className="w-full md:w-1/4 bg-gray-200 p-6 rounded-lg shadow-lg md:sticky md:top-20 h-fit text-center md:text-left md:self-start">
         <h2 className="text-2xl font-semibold text-gray-800 mb-6">
           Specialities
@@ -61,12 +62,17 @@ const Doctors = () => {
             "Dermatologist",
             "Pediatricians",
             "Neurologist",
+            "Gastroenterologist", // Added
+            "Endocrinologist", // Added
+            "Hematologist", // Added
+            "Cardiologist", // Added
             "All",
           ].map((spec) => (
             <li
               key={spec}
               className={`cursor-pointer text-lg ${
-                speciality === spec || (!speciality && spec === "All")
+                speciality?.toLowerCase() === spec.toLowerCase() ||
+                (!speciality && spec === "All")
                   ? "text-blue-600 font-semibold"
                   : "text-gray-700"
               } hover:text-blue-500 transition-all text-center md:text-left`}
