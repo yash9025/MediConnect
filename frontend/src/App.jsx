@@ -11,6 +11,7 @@ import Appointment from './pages/Appointment';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import { ToastContainer, toast } from 'react-toastify';
+import ChatWidget from "./components/ChatWidget"
 
 const App = () => {
   return (
@@ -29,6 +30,7 @@ const App = () => {
         <Route path="/appointment/:docId" element={<Appointment />} />
       </Routes>
       <Footer />
+      <ChatWidget />
     </div>
   );
 };
