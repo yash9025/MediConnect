@@ -39,6 +39,10 @@ It doesn’t just display reports — it reasons:
 
 ---
 
+## Database Schema
+
+<img src="./database-mediconnect.png" alt="Medical Pipeline Flow" width="100%" />
+
 ### Step-by-Step Flow Explanation
 
 1. **User Uploads Blood Report**  
