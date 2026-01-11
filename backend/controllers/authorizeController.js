@@ -49,65 +49,77 @@ export const getPendingReports = async (req, res) => {
 
 // 3. Doctor Verifies & Sends Email
 export const verifyReport = async (req, res) => {
-  try {
-    const { reportId, doctorNotes } = req.body;
+    try {
+        const { reportId, doctorNotes } = req.body;
 
-    if (!reportId || !doctorNotes) {
-        return res.status(400).json({ success: false, message: "Report ID and Doctor Notes are required." });
+        if (!reportId || !doctorNotes) {
+            return res.status(400).json({ success: false, message: "Details missing." });
+        }
+
+        // 1. Fetch Report and User details first (DO NOT update yet)
+        const report = await reportModel.findById(reportId);
+        if (!report) {
+            return res.status(404).json({ success: false, message: "Report not found." });
+        }
+
+        const user = await userModel.findById(report.userId);
+        if (!user || !user.email) {
+            // If there's no email, we cannot fulfill the "mail must be successful" rule
+            return res.status(400).json({ 
+                success: false, 
+                message: "Patient email not found. Cannot verify because notification is required." 
+            });
+        }
+
+        // 2. Attempt Email Logic FIRST
+        // We do this before updating the database.
+        const transporter = nodemailer.createTransport({
+            service: 'gmail', 
+            auth: { 
+                user: process.env.EMAIL_USER, 
+                pass: process.env.EMAIL_PASS 
+            }
+        });
+
+        const mailOptions = {
+            from: process.env.EMAIL_USER,
+            to: user.email,
+            subject: `Medical Report Verified - MediConnect`,
+            html: `
+                <div style="font-family: sans-serif; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
+                    <h2 style="color: #2563eb;">Report Verified</h2>
+                    <p>Hello <strong>${user.name}</strong>, your report has been reviewed by our expert.</p>
+                    <div style="background: #f9fafb; padding: 15px; border-radius: 5px; margin: 10px 0;">
+                        <strong>Doctor's Advice:</strong>
+                        <p>${doctorNotes}</p>
+                    </div>
+                </div>
+            `
+        };
+
+        // This line will throw an error if the email fails (e.g., auth error, network error)
+        await transporter.sendMail(mailOptions);
+
+        // 3. ONLY if the code reaches here (Email Success), update the Database
+        const updatedReport = await reportModel.findByIdAndUpdate(reportId, {
+            verificationStatus: "Verified",
+            doctorNotes: doctorNotes, 
+            authorizedDate: new Date()
+        }, { new: true });
+
+        res.json({ 
+            success: true, 
+            message: "Email sent successfully and report marked as verified!" 
+        });
+
+    } catch (error) {
+        console.error("Verification/Email Error:", error);
+        
+        // If an error occurs (like email failure), the DB update never happens.
+        // We return a 500 error so the Frontend knows to keep the report in the 'Pending' list.
+        res.status(500).json({ 
+            success: false, 
+            message: `Action failed: ${error.message || "Internal Server Error"}. The report has NOT been verified.` 
+        });
     }
-
-    // A. Update Database
-    const report = await reportModel.findByIdAndUpdate(reportId, {
-      verificationStatus: "Verified",
-      doctorNotes: doctorNotes, 
-      authorizedDate: new Date()
-    }, { new: true });
-
-    if (!report) {
-      return res.status(404).json({ success: false, message: "Report not found" });
-    }
-
-    // B. Get User Email
-    const user = await userModel.findById(report.userId);
-
-    if (!user) {
-      return res.json({ success: true, message: "Report verified, but User email not found." });
-    }
-
-    // C. Send Email (Nodemailer) - Clean HTML
-    const transporter = nodemailer.createTransport({
-      service: 'gmail', 
-      auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS }
-    });
-
-    const mailOptions = {
-      from: process.env.EMAIL_USER,
-      to: user.email,
-      subject: `Medical Report Verified - MediConnect`,
-      html: `
-        <div style="font-family: Arial, sans-serif; padding: 20px; border: 1px solid #e0e0e0; border-radius: 8px; max-width: 600px; margin: 0 auto;">
-            <h2 style="color: #059669; text-align: center;">MediConnect Verification</h2>
-            <p>Hello <strong>${user.name}</strong>,</p>
-            <p>Your lab report has been reviewed and authorized by an expert doctor.</p>
-            
-            <div style="background-color: #f0fdf4; padding: 15px; border-left: 4px solid #059669; margin: 20px 0; border-radius: 4px;">
-                <h4 style="margin: 0 0 10px; color: #064e3b;">Doctor's Advice:</h4>
-                <p style="margin: 0; font-style: italic; color: #374151;">"${doctorNotes}"</p>
-            </div>
-
-            <p>You can view the full authorized report on your dashboard.</p>
-            <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
-            <p style="font-size: 12px; color: #6b7280; text-align: center;">Stay Healthy,<br/>Team MediConnect</p>
-        </div>
-      `
-    };
-
-    await transporter.sendMail(mailOptions);
-
-    res.json({ success: true, message: "Report Verified & Patient Notified!" });
-
-  } catch (error) {
-    console.error("Verification Error:", error);
-    res.status(500).json({ success: false, message: "Verification failed" });
-  }
 };
