@@ -134,7 +134,7 @@ const Login = () => {
             </>
           ) : (
             <>
-              <p>Email: <span className="font-mono">richard@mediconnect.com</span></p>
+              <p>Email: <span className="font-mono">rahulcse129@gmail.com</span></p>
               <p>Password: <span className="font-mono">12345678</span></p>
             </>
           )}

@@ -16,44 +16,35 @@ const Login = () => {
 
   const onSubmitHandler = async (e) => {
     e.preventDefault();
-    // Handle form submission for either sign up or login
 
     try {
-
       if (state == 'Sign Up') {
-
         const { data } = await axios.post(backendUrl + '/api/user/register', { name, password, email });
-
         if (data.success) {
           localStorage.setItem('token', data.token);
           setToken(data.token);
-        }else {
+        } else {
           toast.error(data.message);
         }
-
-      } else{
-
+      } else {
         const { data } = await axios.post(backendUrl + '/api/user/login', { password, email });
-
         if (data.success) {
           localStorage.setItem('token', data.token);
           setToken(data.token);
-        }else {
+        } else {
           toast.error(data.message);
         }
-
       }
-      
     } catch (error) {
       toast.error(error.message);
     }
   };
 
-  useEffect(()=>{
-    if(token){
+  useEffect(() => {
+    if (token) {
       navigate('/');
     }
-  },[token])
+  }, [token])
 
   return (
     <form className="max-w-md mx-auto bg-white p-6 rounded-2xl shadow-lg mt-8 mb-8" onSubmit={onSubmitHandler}>
@@ -62,12 +53,12 @@ const Login = () => {
         <h2 className="text-2xl font-semibold text-gray-800">
           {state === 'Sign Up' ? 'Create Account' : 'Login'}
         </h2>
-        <p className="text-gray-600 text-sm">
+        <p className="text-gray-600 text-sm text-center">
           Please {state === 'Sign Up' ? 'create an account' : 'login'} to book an appointment
         </p>
 
         {/* Full Name Field */}
-        {state === 'Sign Up' && (  //agar state Sign Up hga tabhi ye full name wala field dikhega
+        {state === 'Sign Up' && (
           <div className="w-full">
             <p className="text-gray-700 font-medium">Full Name</p>
             <input
@@ -76,6 +67,7 @@ const Login = () => {
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="Enter your full name"
+              required
             />
           </div>
         )}
@@ -89,6 +81,7 @@ const Login = () => {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             placeholder="Enter your email"
+            required
           />
         </div>
 
@@ -101,23 +94,24 @@ const Login = () => {
             value={password}
             onChange={(e) => setpassword(e.target.value)}
             placeholder="Enter your password"
+            required
           />
         </div>
 
         {/* Submit Button */}
         <button
           type="submit"
-          className="cursor-pointer w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 active:bg-blue-800 transition"
+          className="cursor-pointer w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 active:bg-blue-800 transition font-medium"
         >
           {state === 'Sign Up' ? 'Create Account' : 'Login'}
         </button>
 
-        {/* Conditional Link below the button */}
+        {/* Conditional Link */}
         {state === 'Sign Up' ? (
           <p className="text-gray-600 text-sm mt-2">
             Already have an account?{' '}
             <span
-              className="text-blue-600 cursor-pointer hover:underline"
+              className="text-blue-600 cursor-pointer hover:underline font-medium"
               onClick={() => setState('Login')}
             >
               Login
@@ -127,13 +121,29 @@ const Login = () => {
           <p className="text-gray-600 text-sm mt-2">
             Don't have an account?{' '}
             <span
-              className="text-blue-600 cursor-pointer hover:underline"
+              className="text-blue-600 cursor-pointer hover:underline font-medium"
               onClick={() => setState('Sign Up')}
             >
               Create a new account
             </span>
           </p>
         )}
+
+        {/* --- TEST CREDENTIALS BOX --- */}
+        <div className="w-full mt-6 p-4 bg-blue-50 border border-blue-100 rounded-xl">
+          <p className="text-xs font-bold text-blue-800 uppercase tracking-wider mb-2">Patient Test Account</p>
+          <div className="space-y-1">
+            <p className="text-sm text-gray-700 font-medium flex justify-between">
+              <span>Email:</span> 
+              <span className="text-blue-700">agrawal6353@gmail.com</span>
+            </p>
+            <p className="text-sm text-gray-700 font-medium flex justify-between">
+              <span>Password:</span> 
+              <span className="text-blue-700">12345678</span>
+            </p>
+          </div>
+        </div>
+
       </div>
     </form>
   );
