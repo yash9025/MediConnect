@@ -2,7 +2,6 @@
 ### The Agentic Medical Intelligence Platform  
 **Instant Report Analysis. Smart Triage. Faster Care.**
 
-![Python](https://img.shields.io/badge/Python-3.10%2B-blue?style=for-the-badge&logo=python)
 ![MongoDB](https://img.shields.io/badge/Database-MongoDB-green?style=for-the-badge&logo=mongodb)
 ![Gemini](https://img.shields.io/badge/AI-Gemini-orange?style=for-the-badge&logo=google)
 ![Agentic AI](https://img.shields.io/badge/Architecture-Agentic%20AI-purple?style=for-the-badge)
