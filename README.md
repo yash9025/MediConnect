@@ -6,7 +6,6 @@
 ![Gemini](https://img.shields.io/badge/AI-Gemini-orange?style=for-the-badge&logo=google)
 ![Agentic AI](https://img.shields.io/badge/Architecture-Agentic%20AI-purple?style=for-the-badge)
 
----
 
 ## The Problem
 
@@ -65,7 +64,7 @@ It doesn’t just display reports — it reasons:
 
 ## Pipeline Flow
 
-<img src="./pipeline.png" alt="Medical AI Flow" width="100%" />
+<img src="./pipeline.png" alt="Medical Pipeline Flow" width="100%" />
 
 ---
 
