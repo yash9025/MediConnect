@@ -150,4 +150,4 @@ An agentic medical platform that converts blood reports into actionable healthca
 
 ## Demo Video
 
-https://drive.google.com/file/d/1JtH88a7_Ui-_KAcySHQ-XAgxO1Pc8tR_/view?usp=sharing]([https://link-to-your-video-on-drive-or-youtube](https://drive.google.com/file/d/1wZ_4zdWA77VSet9fAZrh1cDfvANloHS7/view?usp=sharing))
+(https://drive.google.com/file/d/1wZ_4zdWA77VSet9fAZrh1cDfvANloHS7/view?usp=sharing)
