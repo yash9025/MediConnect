@@ -138,3 +138,12 @@ MedAI CareFlow bridges the gap between raw medical data and timely healthcare de
 ### One-Line Summary
 
 An agentic medical platform that converts blood reports into actionable healthcare decisions in seconds.
+
+---
+
+## 🔗 Live Link
+
+<p align="center">
+  <strong>Check out the live application here:</strong><br />
+  <a href="https://mediconnect-wx0o.onrender.com/" target="_blank">MediConnect Live Demo</a>
+</p>
