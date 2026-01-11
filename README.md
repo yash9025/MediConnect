@@ -41,7 +41,7 @@ It doesn’t just display reports — it reasons:
 
 ## Database Schema
 
-<img src="./database-mediconnect.png" alt="Medical Pipeline Flow" width="100%" />
+[<img src="./database-mediconnect.png" alt="Medical Pipeline Flow" width="100%" />](https://github.com/yash9025/MediConnect/blob/main/databse-mediconnect.png)
 
 ### Step-by-Step Flow Explanation
 
