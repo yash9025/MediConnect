@@ -3,6 +3,7 @@ import { AppContext } from '../context/AppContext';
 import { toast } from 'react-toastify';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
+import MedicalChatBot from '../components/MedicalChatBot';
 
 const MyAppointments = () => {
   const { currencySymbol, backendUrl, token, getDoctorData } = useContext(AppContext);
@@ -150,6 +151,7 @@ const MyAppointments = () => {
           </div>
         ))}
       </div>
+      <MedicalChatBot/>
     </div>
   );
 };

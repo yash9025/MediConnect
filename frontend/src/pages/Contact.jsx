@@ -1,5 +1,6 @@
 import React from 'react';
 import { assets } from '../assets/assets';
+import MedicalChatBot from '../components/MedicalChatBot';
 
 const Contact = () => {
 
@@ -91,6 +92,7 @@ const Contact = () => {
           </div>
         </div>
       </div>
+      <MedicalChatBot/>
     </div>
   );
 };

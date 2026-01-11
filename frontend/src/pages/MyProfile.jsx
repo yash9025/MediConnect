@@ -3,6 +3,7 @@ import { AppContext } from '../context/AppContext';
 import { assets } from '../assets/assets.js'
 import axios from 'axios';
 import { toast } from 'react-toastify';
+import MedicalChatBot from '../components/MedicalChatBot.jsx';
 
 const MyProfile = () => {
 
@@ -210,6 +211,7 @@ const MyProfile = () => {
             </button>
         }
       </div>
+      <MedicalChatBot/>
     </div>
   );
 }

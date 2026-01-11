@@ -5,6 +5,7 @@ import { assets } from '../assets/assets';
 import RelatedDoctors from '../components/RelatedDoctors';
 import { toast } from "react-toastify";
 import axios from 'axios';
+import MedicalChatBot from '../components/MedicalChatBot';
 
 const Appointment = () => {
   const { docId } = useParams();
@@ -235,6 +236,7 @@ const Appointment = () => {
 
       {/* Listing related doctors */}
       <RelatedDoctors docId={docId} speciality={docInfo.speciality} />
+      <MedicalChatBot/>
     </div>
   );
 };

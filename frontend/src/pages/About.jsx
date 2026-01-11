@@ -1,5 +1,6 @@
 
 import { assets } from '../assets/assets';
+import MedicalChatBot from '../components/MedicalChatBot';
 
 const About = () => {
   return (
@@ -36,6 +37,7 @@ const About = () => {
             <li>End-to-end privacy and security for all user data</li>
           </ul>
         </div>
+        <MedicalChatBot/>
       </div>
     </div>
   );

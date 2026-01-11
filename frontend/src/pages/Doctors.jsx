@@ -1,6 +1,7 @@
 import { useContext, useState, useRef, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { AppContext } from "../context/AppContext";
+import MedicalChatBot from "../components/MedicalChatBot";
 
 const Doctors = () => {
   const { speciality } = useParams();
@@ -182,6 +183,7 @@ const Doctors = () => {
           )}
         </div>
       </div>
+      <MedicalChatBot/>
     </div>
   );
 };
