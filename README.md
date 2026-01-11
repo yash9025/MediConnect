@@ -63,6 +63,12 @@ It doesn’t just display reports — it reasons:
 
 ---
 
+## Pipeline Flow
+
+<img src="./pipeline.png" alt="Medical AI Flow" width="100%" />
+
+---
+
 ## Key Agentic Capabilities
 
 - Autonomous medical report analysis  
