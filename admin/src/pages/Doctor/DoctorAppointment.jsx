@@ -131,13 +131,13 @@ const DoctorAppointment = () => {
     if (dateStr === 'all') return 'All Dates';
     const todayStr = getTodayStr();
     const formattedDate = slotDateFormat(dateStr);
-    if (dateStr === todayStr) return `📅 Today - ${formattedDate}`;
+    if (dateStr === todayStr) return ` Today - ${formattedDate}`;
     
     // Check if it's tomorrow
     const tomorrow = new Date();
     tomorrow.setDate(tomorrow.getDate() + 1);
     const tomorrowStr = `${String(tomorrow.getDate()).padStart(2, '0')}_${String(tomorrow.getMonth() + 1).padStart(2, '0')}_${tomorrow.getFullYear()}`;
-    if (dateStr === tomorrowStr) return `📅 Tomorrow - ${formattedDate}`;
+    if (dateStr === tomorrowStr) return ` Tomorrow - ${formattedDate}`;
     
     return `${formattedDate}`;
   };
