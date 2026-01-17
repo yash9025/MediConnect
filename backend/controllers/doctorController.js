@@ -389,7 +389,7 @@ const getDoctorStatus = async (req, res) => {
   }
 };
 
-// API to start OPD 
+const startOPD = async (req, res) => {
   try {
     const { docId } = req.body;
     const todayStr = getTodayStr();
