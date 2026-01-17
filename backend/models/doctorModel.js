@@ -55,6 +55,14 @@ const doctorSchema = new mongoose.Schema(
       type: String,
       default: ""  // The slot time currently being served (e.g., "12:00 PM")
     },
+    opdActive: {
+      type: Boolean,
+      default: false  // Whether OPD is currently active
+    },
+    opdStartTime: {
+      type: Date,
+      default: null  // When OPD was started today
+    },
     lastQueueDate: { 
         type: String, 
         default: "" 
