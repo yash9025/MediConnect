@@ -13,8 +13,9 @@
   "description": "",
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
-    "@langchain/community": "^0.3.26",
-    "@langchain/core": "^0.3.40",
+    "@huggingface/inference": "^4.13.9",
+    "@langchain/community": "^1.1.4",
+    "@langchain/core": "^1.1.15",
     "@langchain/pinecone": "^0.1.3",
     "@pinecone-database/pinecone": "^6.1.3",
     "@supabase/supabase-js": "^2.90.1",

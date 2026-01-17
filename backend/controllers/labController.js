@@ -1,7 +1,7 @@
 import { GoogleGenerativeAI, SchemaType } from "@google/generative-ai";
 import { Pinecone } from "@pinecone-database/pinecone";
 import { PineconeStore } from "@langchain/pinecone";
-import { HuggingFaceTransformersEmbeddings } from "@langchain/community/embeddings/hf_transformers";
+import { HuggingFaceInferenceEmbeddings } from "@langchain/community/embeddings/hf";
 import { v2 as cloudinary } from "cloudinary";
 import fs from "fs";
 import path from "path";
@@ -15,14 +15,18 @@ dotenv.config();
 
 const CONFIG = {
   PINECONE_INDEX: "mediconnect",
-  EMBEDDING_MODEL: "Xenova/all-mpnet-base-v2",
+  EMBEDDING_MODEL: "sentence-transformers/all-mpnet-base-v2",
   RAG_K: 8,
   RAG_THRESHOLD: 0.35
 };
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
-const embeddings = new HuggingFaceTransformersEmbeddings({ model: CONFIG.EMBEDDING_MODEL });
+
+const embeddings = new HuggingFaceInferenceEmbeddings({
+  apiKey: process.env.HF_API_KEY,
+  model: CONFIG.EMBEDDING_MODEL,
+});
 
 let vectorStoreInstance = null;
 
