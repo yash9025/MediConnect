@@ -194,14 +194,14 @@ const DoctorProfile = () => {
              {isEdit ? (
                  <button 
                     onClick={updateProfile} 
-                    className="px-8 py-3 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700 hover:shadow-lg transition-all transform active:scale-95 flex items-center gap-2"
+                    className="cursor-pointer px-8 py-3 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700 hover:shadow-lg transition-all transform active:scale-95 flex items-center gap-2"
                  >
                     Save Changes
                  </button>
              ) : (
                  <button 
                     onClick={() => setIsEdit(true)} 
-                    className="px-8 py-3 bg-white border-2 border-blue-600 text-blue-600 font-bold rounded-lg hover:bg-blue-50 hover:shadow-md transition-all transform active:scale-95"
+                    className="cursor-pointer px-8 py-3 bg-white border-2 border-blue-600 text-blue-600 font-bold rounded-lg hover:bg-blue-50 hover:shadow-md transition-all transform active:scale-95"
                  >
                     Edit Profile Details
                  </button>
