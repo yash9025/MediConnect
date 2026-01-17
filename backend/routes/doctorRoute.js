@@ -1,6 +1,5 @@
 import express from 'express';
-import { appointmentCancel, appointmentComplete, appointmentsDoctor, doctorDashboard, doctorList, doctorProfile, loginDoctor, updateDoctorProfile } from '../controllers/doctorController.js';
-// 1. IMPORT THE NEW CONTROLLER FUNCTIONS
+import { appointmentCancel, appointmentComplete, appointmentsDoctor, doctorDashboard, doctorList, doctorProfile, loginDoctor, updateDoctorProfile, nextPatient, markAbsent, getDoctorStatus } from '../controllers/doctorController.js';
 import { getPendingReports, verifyReport } from '../controllers/authorizeController.js';
 import authDoctor from '../middlewares/authDoctor.js';
 
@@ -15,6 +14,9 @@ doctorRouter.get('/dashboard' , authDoctor , doctorDashboard);
 doctorRouter.get('/profile' , authDoctor , doctorProfile);
 doctorRouter.post('/update-profile' , authDoctor , updateDoctorProfile);
 doctorRouter.post('/verification-requests', authDoctor, getPendingReports); 
-doctorRouter.post('/send-advice', authDoctor, verifyReport);      
+doctorRouter.post('/send-advice', authDoctor, verifyReport); 
+doctorRouter.post('/next-patient', authDoctor, nextPatient);
+doctorRouter.post('/mark-absent', authDoctor, markAbsent);
+doctorRouter.post('/status', getDoctorStatus);  // Public - no auth needed for users to see queue status
        
 export default doctorRouter;
