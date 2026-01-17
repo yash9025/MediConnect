@@ -3,7 +3,7 @@ import chatModel from "../models/chatModel.js";
 // 1. Get Chat History
 export const getChatHistory = async (req, res) => {
     try {
-        const { userId } = req.body;
+        const userId = req.userId;
 
         if (!userId) {
             return res.status(400).json({ success: false, message: "User ID is required" });
@@ -23,10 +23,16 @@ export const getChatHistory = async (req, res) => {
 // 2. Save New Message (Call this every time user/bot sends msg)
 export const saveChatMessage = async (req, res) => {
     try {
-        const { userId, message } = req.body;
+        // Get userId from auth middleware (not from body)
+        const userId = req.userId;
+        const { message } = req.body;
 
-        if (!userId || !message) {
-            return res.status(400).json({ success: false, message: "User ID and Message are required" });
+        if (!userId) {
+            return res.status(401).json({ success: false, message: "User not authenticated" });
+        }
+
+        if (!message) {
+            return res.status(400).json({ success: false, message: "Message is required" });
         }
 
         let chat = await chatModel.findOne({ userId });
@@ -49,6 +55,29 @@ export const saveChatMessage = async (req, res) => {
 
     } catch (error) {
         console.error("Save Message Error:", error);
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+// 3. Delete Chat History (Reset chat)
+export const deleteChatHistory = async (req, res) => {
+    try {
+        const userId = req.userId;
+
+        if (!userId) {
+            return res.status(400).json({ success: false, message: "User ID is required" });
+        }
+
+        const result = await chatModel.findOneAndDelete({ userId });
+
+        if (!result) {
+            return res.json({ success: true, message: "No chat history found to delete" });
+        }
+
+        res.json({ success: true, message: "Chat history deleted successfully" });
+
+    } catch (error) {
+        console.error("Delete History Error:", error);
         res.status(500).json({ success: false, message: error.message });
     }
 };
