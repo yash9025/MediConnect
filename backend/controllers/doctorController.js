@@ -237,7 +237,8 @@ const nextPatient = async (req, res) => {
       lastUpdate: now,
       lastCallTime: now,
       consultationTimes,
-      avgConsultationTime
+      avgConsultationTime,
+      opdActive: false  // Turn off OPD waiting mode once queue starts
     });
 
     const io = req.app.get("io");
@@ -245,7 +246,8 @@ const nextPatient = async (req, res) => {
       io.to(`doctor_${docId}`).emit("queue-update", {
         currentSlotTime: nextAppt.slotTime,
         lastUpdate: now,
-        avgTime: avgConsultationTime
+        avgTime: avgConsultationTime,
+        opdActive: false  // Notify users OPD waiting mode is off
       });
     }
 
@@ -348,13 +350,14 @@ const getDoctorStatus = async (req, res) => {
     const todayStr = getTodayStr();
     
     const doctor = await doctorModel.findById(docId)
-      .select(["currentSlotTime", "lastQueueDate", "lastUpdate", "avgConsultationTime", "consultationTimes", "lastCallTime"]);
+      .select(["currentSlotTime", "lastQueueDate", "lastUpdate", "avgConsultationTime", "consultationTimes", "lastCallTime", "opdActive", "opdStartTime"]);
 
     if (!doctor) return res.json({ success: false, message: "Doctor not found" });
 
     // Reset data if it's a new day
     const isToday = doctor.lastQueueDate === todayStr;
     const currentSlotTime = isToday ? (doctor.currentSlotTime || "") : "";
+    const opdActive = isToday ? (doctor.opdActive || false) : false;
     
     // Dynamic avg calculation (fallback to 15 if no history)
     const history = doctor.consultationTimes || [];
@@ -371,6 +374,8 @@ const getDoctorStatus = async (req, res) => {
     res.json({
       success: true,
       currentSlotTime,
+      opdActive,
+      opdStartTime: isToday ? doctor.opdStartTime : null,
       timePerVisit: dynamicTime,
       avgConsultationTime: dynamicTime,
       lastUpdate: doctor.lastUpdate,
@@ -378,6 +383,35 @@ const getDoctorStatus = async (req, res) => {
       consultationHistory: history,
       usingLast3: history.length > 0
     });
+  } catch (error) {
+    console.error(error);
+    res.json({ success: false, message: error.message });
+  }
+};
+
+// API to start OPD 
+  try {
+    const { docId } = req.body;
+    const todayStr = getTodayStr();
+
+    // Update doctor's OPD status
+    await doctorModel.findByIdAndUpdate(docId, {
+      opdActive: true,
+      opdStartTime: new Date(),
+      lastQueueDate: todayStr  // Also set the queue date
+    });
+
+    // Emit socket event to notify all patients
+    const io = req.app.get("io");
+    if (io) {
+      io.to("doctor_" + docId).emit("opd-started", {
+        opdActive: true,
+        opdStartTime: new Date()
+      });
+    }
+
+    res.json({ success: true, message: "OPD Started! Patients have been notified." });
+
   } catch (error) {
     console.error(error);
     res.json({ success: false, message: error.message });
@@ -398,4 +432,5 @@ export {
   markAbsent,
   resetQueue,
   getDoctorStatus,
+  startOPD,
 };
