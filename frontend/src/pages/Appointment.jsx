@@ -1,11 +1,11 @@
-import React, { useEffect, useState, useContext, useRef } from 'react';
+import { useEffect, useState, useContext, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { AppContext } from '../context/AppContext';
 import { assets } from '../assets/assets';
 import RelatedDoctors from '../components/RelatedDoctors';
 import { toast } from "react-toastify";
 import axios from 'axios';
-import MedicalChatBot from '../components/MedicalChatBot';
+import { MedicalChatBot } from '../features/rag';
 
 const Appointment = () => {
   const { docId } = useParams();
@@ -21,7 +21,6 @@ const Appointment = () => {
   const [docSlots, setDocSlots] = useState([]);
   const [slotIndex, setSlotIndex] = useState(0);
   const [slotTime, setSlotTime] = useState('');
-  const [selectedDate, setSelectedDate] = useState('');
 
 
 
@@ -56,8 +55,8 @@ const Appointment = () => {
         while (currentDate < endTime) {
           let formattedTime = currentDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
-          let day = currentDate.getDate();
-          let month = currentDate.getMonth() + 1;
+          let day = String(currentDate.getDate()).padStart(2, '0');
+          let month = String(currentDate.getMonth() + 1).padStart(2, '0');
           let year = currentDate.getFullYear();
 
           const slotDate = day + "_" + month + "_" + year;
@@ -94,8 +93,8 @@ const Appointment = () => {
 
       const date = docSlots[slotIndex][0].datetime;
 
-      let day = date.getDate();
-      let month = date.getMonth() + 1;
+      let day = String(date.getDate()).padStart(2, '0');
+      let month = String(date.getMonth() + 1).padStart(2, '0');
       let year = date.getFullYear();
 
       const slotDate = day + "_" + month + "_" + year
@@ -116,8 +115,6 @@ const Appointment = () => {
 
     }
   }
-
-  
 
   const scrollSlots = (direction) => {
     if (slotContainerRef.current) {
@@ -144,7 +141,7 @@ const Appointment = () => {
             <p className="text-4xl font-semibold text-gray-800 hover:text-blue-600 transition-all duration-300">{docInfo.name}</p>
             <p className="text-xs lg:text-sm text-gray-600">{docInfo.degree} - {docInfo.speciality}</p>
             <div className="mt-2">
-              <button className="py-1 px-4 bg-gray-50 text-black text-xs rounded-full shadow transition duration-300">{docInfo.experience}</button>
+              <button className="cursor-pointer py-1 px-4 bg-gray-50 text-black text-xs rounded-full shadow transition duration-300">{docInfo.experience}</button>
             </div>
             <p className="mt-2 text-sm font-semibold text-gray-700">
               Appointment fee: <span className="text-blue-500">{currencySymbol}{docInfo.fees}</span>
@@ -165,7 +162,7 @@ const Appointment = () => {
         <div className="relative flex items-center">
           <button
             onClick={() => scrollSlots("left")}
-            className="absolute left-0 z-10 bg-gray-200 p-2 rounded-full shadow-md hover:bg-gray-300 transition hidden sm:block"
+            className="cursor-pointer absolute left-0 z-10 bg-gray-200 p-2 rounded-full shadow-md hover:bg-gray-300 transition hidden sm:block"
           >
             ◀
           </button>
@@ -179,7 +176,6 @@ const Appointment = () => {
                     key={index}
                     onClick={() => {
                       setSlotIndex(index);
-                      setSelectedDate(`${daysOfWeek[dateObj.getDay()]}, ${months[dateObj.getMonth()]} ${dateObj.getDate()}`);
                       setSlotTime('');
                     }}
                     className={`text-center py-4 px-6 min-w-[100px] rounded-lg cursor-pointer border transition-all ${slotIndex === index ? " bg-blue-500 text-white border-blue-500" : "border-gray-300 hover:border-blue-500 hover:text-blue-500"
@@ -196,7 +192,7 @@ const Appointment = () => {
 
           <button
             onClick={() => scrollSlots("right")}
-            className="absolute right-0 z-10 bg-gray-200 p-2 rounded-full shadow-md hover:bg-gray-300 transition hidden sm:block"
+            className="cursor-pointer absolute right-0 z-10 bg-gray-200 p-2 rounded-full shadow-md hover:bg-gray-300 transition hidden sm:block"
           >
             ▶
           </button>
@@ -210,7 +206,7 @@ const Appointment = () => {
                 <button
                   key={i}
                   onClick={() => setSlotTime(slot.time)}
-                  className={`py-2 px-4 rounded-lg border transition-all ${slotTime === slot.time ? "bg-blue-500 text-white border-blue-500" : "border-gray-300 hover:border-blue-500 hover:text-blue-500"
+                  className={`cursor-pointer py-2 px-4 rounded-lg border transition-all ${slotTime === slot.time ? "bg-blue-500 text-white border-blue-500" : "border-gray-300 hover:border-blue-500 hover:text-blue-500"
                     }`}
                 >
                   {slot.time}

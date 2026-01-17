@@ -1,6 +1,6 @@
 
 import { assets } from '../assets/assets';
-import MedicalChatBot from '../components/MedicalChatBot';
+import { MedicalChatBot } from '../features/rag';
 
 const About = () => {
   return (

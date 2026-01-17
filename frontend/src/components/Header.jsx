@@ -35,7 +35,7 @@ const Header = () => {
                 </div>
     
                 {/* Book Appointment Button */}
-                <a href="#speciality" onClick={handleSmoothScroll} className="relative mt-4 flex items-center justify-center lg:justify-start gap-2 px-4 py-2 w-fit rounded-full text-base font-semibold shadow-md bg-gradient-to-r from-yellow-300 to-yellow-500 text-gray-900 transition-all duration-300 transform hover:scale-105 hover:shadow-lg hover:from-yellow-400 hover:to-yellow-600">
+                <a href="#speciality" onClick={handleSmoothScroll} className="cursor-pointer relative mt-4 flex items-center justify-center lg:justify-start gap-2 px-4 py-2 w-fit rounded-full text-base font-semibold shadow-md bg-gradient-to-r from-yellow-300 to-yellow-500 text-gray-900 transition-all duration-300 transform hover:scale-105 hover:shadow-lg hover:from-yellow-400 hover:to-yellow-600">
                     Book Appointment
                     <img src={assets.arrow_icon} alt="Arrow Icon" className="w-4 h-4 transition-transform duration-300 group-hover:translate-x-1" />
                 </a>

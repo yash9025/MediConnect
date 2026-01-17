@@ -2,7 +2,7 @@ import Header from '../components/Header'
 import SpecialityMenu from '../components/SpecialityMenu'
 import TopDoctors from '../components/TopDoctors'
 import Banner from '../components/Banner'
-import MedicalChatBot from '../components/MedicalChatBot'
+import { MedicalChatBot } from '../features/rag'
 const Home = () => {
   
   return (

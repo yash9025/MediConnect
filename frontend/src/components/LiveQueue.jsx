@@ -12,10 +12,9 @@ const parseSlotMinutes = (slotTime) => {
     const match = slotTime.match(/(\d{1,2}):(\d{2})\s*(AM|PM)/i);
     if (!match) return 0;
 
-    let [_, hours, minutes, period] = match;
-    hours = parseInt(hours);
-    minutes = parseInt(minutes);
-    period = period.toUpperCase();
+    let hours = parseInt(match[1]);
+    const minutes = parseInt(match[2]);
+    const period = match[3].toUpperCase();
 
     if (period === 'PM' && hours !== 12) hours += 12;
     if (period === 'AM' && hours === 12) hours = 0;
@@ -33,11 +32,32 @@ const LiveQueue = ({ docId, mySlotTime }) => {
         timePerVisit: 15,
         lastUpdate: null,
         isLiveAvg: false,
+        opdActive: false,  // Track OPD status
     });
     
     const [myStatus, setMyStatus] = useState("Pending");
     const [timeInside, setTimeInside] = useState(0);
     const [isSlotTimeReached, setIsSlotTimeReached] = useState(false);
+    const [isWithinOneHour, setIsWithinOneHour] = useState(true); // Default to true to show queue
+
+    // Check if my slot is within 1 hour - reactive with interval
+    useEffect(() => {
+        if (!mySlotTime) return;
+        
+        const checkIfWithinHour = () => {
+            const now = new Date();
+            const slotMins = parseSlotMinutes(mySlotTime);
+            const currentMins = now.getHours() * 60 + now.getMinutes();
+            const diff = slotMins - currentMins;
+            const within = diff <= 60;
+            console.log(`[LiveQueue] Slot: ${mySlotTime}, Current: ${currentMins}min, Slot: ${slotMins}min, Diff: ${diff}min, WithinHour: ${within}`);
+            setIsWithinOneHour(within);
+        };
+        
+        checkIfWithinHour();
+        const timer = setInterval(checkIfWithinHour, 60000); // Check every minute
+        return () => clearInterval(timer);
+    }, [mySlotTime]);
 
     const queuePosition = useMemo(() => {
         if (!queueState.currentSlotTime) return -1;
@@ -77,11 +97,13 @@ const LiveQueue = ({ docId, mySlotTime }) => {
                 ]);
 
                 if (docRes.data.success) {
+                    console.log("Fetched doctor status:", docRes.data);
                     setQueueState({
                         currentSlotTime: docRes.data.currentSlotTime || "",
                         timePerVisit: docRes.data.avgConsultationTime || 15,
                         lastUpdate: docRes.data.lastUpdate,
-                        isLiveAvg: docRes.data.usingLast3 || false
+                        isLiveAvg: docRes.data.usingLast3 || false,
+                        opdActive: docRes.data.opdActive || false
                     });
                 }
 
@@ -97,16 +119,28 @@ const LiveQueue = ({ docId, mySlotTime }) => {
         socket.emit('join-doctor-room', docId);
 
         const handleQueueUpdate = (data) => {
+            console.log("Queue update received:", data);
             setQueueState(prev => ({
                 ...prev,
                 currentSlotTime: data.currentSlotTime ?? prev.currentSlotTime,
                 lastUpdate: data.lastUpdate ?? prev.lastUpdate,
                 timePerVisit: data.avgTime ?? prev.timePerVisit,
-                isLiveAvg: !!data.avgTime
+                isLiveAvg: !!data.avgTime,
+                opdActive: data.opdActive ?? prev.opdActive  // Update OPD status live
+            }));
+        };
+
+        // Handle OPD started event - real-time notification
+        const handleOpdStarted = (data) => {
+            console.log("OPD Started event received:", data);
+            setQueueState(prev => ({
+                ...prev,
+                opdActive: true
             }));
         };
 
         socket.on('queue-update', handleQueueUpdate);
+        socket.on('opd-started', handleOpdStarted);
         
         socket.on('patient-skipped', ({ skippedSlotTime }) => {
             if (skippedSlotTime === mySlotTime) setMyStatus("Absent");
@@ -122,6 +156,7 @@ const LiveQueue = ({ docId, mySlotTime }) => {
 
         return () => {
             socket.off('queue-update', handleQueueUpdate);
+            socket.off('opd-started', handleOpdStarted);
             socket.disconnect();
         };
     }, [docId, mySlotTime, backendUrl]);
@@ -183,21 +218,66 @@ const LiveQueue = ({ docId, mySlotTime }) => {
         </div>
     );
 
+    // NEW: OPD Active but slot is far away (more than 1 hour)
+    const renderOpdActiveWaiting = () => (
+        <div className="bg-gradient-to-br from-red-50 to-rose-50 border-2 border-red-200 rounded-2xl p-6 text-center shadow-sm">
+            <div className="mx-auto bg-red-100 w-14 h-14 rounded-full flex items-center justify-center mb-3">
+                <span className="relative flex h-4 w-4">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-4 w-4 bg-red-500"></span>
+                </span>
+            </div>
+            <h3 className="text-lg font-bold text-red-800 mb-2">🔴 Doctor is in OPD</h3>
+            <p className="text-red-600 text-sm mb-3 leading-relaxed">
+                The doctor has started seeing patients. Your slot is at <b className="text-red-700">{mySlotTime}</b>.
+            </p>
+            <div className="bg-white border border-red-100 rounded-xl p-3 mb-3">
+                <p className="text-xs text-red-500 font-medium uppercase tracking-wide mb-1">We Recommend</p>
+                <p className="text-sm text-red-700 font-semibold">Check back 1 hour before your slot</p>
+            </div>
+            <p className="text-xs text-red-400">
+                You will see the live queue when your slot is within 1 hour
+            </p>
+        </div>
+    );
+
     const renderActiveTurn = () => {
         if (!isSlotTimeReached && mySlotTime) {
+            // Yellow card - slot time not reached yet
             return (
-                <div className="rounded-2xl bg-gradient-to-br from-amber-400 to-orange-500 p-6 text-white shadow-lg text-center">
-                    <h3 className="text-xl font-bold">You are Next!</h3>
-                    <p className="text-amber-100 text-sm mt-1">Please arrive at your slot time: {mySlotTime}</p>
+                <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-amber-400 to-orange-500 p-6 text-white shadow-lg">
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2"></div>
+                    <div className="relative z-10 text-center">
+                        <div className="mx-auto bg-white/20 w-14 h-14 rounded-full flex items-center justify-center mb-3 backdrop-blur-sm">
+                            <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                            </svg>
+                        </div>
+                        <h3 className="text-2xl font-bold tracking-tight mb-1">You&apos;re Next!</h3>
+                        <p className="text-amber-100 text-sm font-medium">Please arrive at your scheduled time</p>
+                        <div className="mt-4 inline-block bg-white text-amber-600 px-5 py-2 rounded-full text-lg font-bold shadow-md">
+                            {mySlotTime}
+                        </div>
+                        <p className="text-amber-100/80 text-xs mt-3">Doctor is ready for you</p>
+                    </div>
                 </div>
             );
         }
+        // Green card - it's actually your turn now
         return (
-            <div className="rounded-2xl bg-gradient-to-br from-emerald-400 to-teal-500 p-6 text-white shadow-lg text-center">
-                <h3 className="text-2xl font-bold">It is Your Turn!</h3>
-                <p className="text-emerald-50 text-sm mt-1">Please proceed to the doctor room.</p>
-                <div className="mt-4 inline-block bg-white text-emerald-600 px-4 py-1.5 rounded-full text-sm font-bold">
-                    Slot: {mySlotTime}
+            <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-emerald-400 to-teal-500 p-6 text-white shadow-lg">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2"></div>
+                <div className="relative z-10 text-center">
+                    <div className="mx-auto bg-white/20 w-14 h-14 rounded-full flex items-center justify-center mb-3 backdrop-blur-sm">
+                        <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
+                        </svg>
+                    </div>
+                    <h3 className="text-2xl font-bold tracking-tight mb-1">It&apos;s Your Turn!</h3>
+                    <p className="text-emerald-50 text-sm font-medium">Please proceed to the doctor&apos;s room</p>
+                    <div className="mt-4 inline-block bg-white text-emerald-600 px-5 py-2 rounded-full text-sm font-bold shadow-md">
+                        Slot: {mySlotTime}
+                    </div>
                 </div>
             </div>
         );
@@ -253,7 +333,19 @@ const LiveQueue = ({ docId, mySlotTime }) => {
     if (myStatus === "Cancelled") return renderCancelled();
     if (myStatus === "Absent" || myStatus === "Skipped") return renderAbsent();
     if (myStatus === "Completed") return renderCompleted();
+    
+    console.log(`[LiveQueue] Render decision - opdActive: ${queueState.opdActive}, isWithinOneHour: ${isWithinOneHour}, currentSlotTime: ${queueState.currentSlotTime}`);
+    
+    // OPD active (doctor clicked Start OPD but hasn't called anyone yet)
+    // Show red card only if slot is more than 1 hour away
+    if (queueState.opdActive && !isWithinOneHour) {
+        return renderOpdActiveWaiting();
+    }
+    
+    // Queue not started (no current slot being served)
     if (!queueState.currentSlotTime || queuePosition === -1) return renderNotStarted();
+    
+    // It's my turn
     if (queuePosition === 0 || queueState.currentSlotTime === mySlotTime) return renderActiveTurn();
 
     return renderQueue();

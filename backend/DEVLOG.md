@@ -4,8 +4,7 @@ This log tracks significant technical challenges, race conditions, and architect
 
 ---
 
-## 📅 [2026-01-16] Feature: Dynamic Wait Time Algorithm
-**Severity:** MEDIUM (UX Impact)  
+## 📅 [2026-01-16] Feature: Dynamic Wait Time Algorithm 
 **Component:** `doctorController.js` -> `nextPatient` logic
 
 ### 🚩 The Challenge

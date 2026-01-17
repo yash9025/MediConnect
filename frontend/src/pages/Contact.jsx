@@ -1,6 +1,6 @@
 import React from 'react';
 import { assets } from '../assets/assets';
-import MedicalChatBot from '../components/MedicalChatBot';
+import { MedicalChatBot } from '../features/rag';
 
 const Contact = () => {
 
@@ -67,7 +67,7 @@ const Contact = () => {
                 <button
                   onClick={handleSubmit}
                   type="submit"
-                  className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition duration-300"
+                  className="cursor-pointer px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition duration-300"
                 >
                   Send Message
                 </button>
