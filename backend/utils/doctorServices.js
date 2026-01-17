@@ -1,28 +1,24 @@
 import doctorModel from "../models/doctorModel.js";
 
-/**
- * Finds available doctors in the DB based on the AI's recommended speciality.
- * @param {string} speciality - The specialist type returned by AI (e.g., "Cardiologist")
- * @returns {Promise<Array>} - List of doctor objects
- */
 export const findMatchingDoctors = async (speciality) => {
   try {
-    // If AI says "External Referral", we can't match internal doctors
+    // Return early if speciality is undefined or explicitly external
     if (!speciality || speciality === "External Referral") {
       return [];
     }
 
-    // Query your Doctor Collection
-    // We strictly filter by 'available: true'
+    // Perform case-insensitive search for available doctors
     const doctors = await doctorModel.find({ 
-      speciality: speciality, 
+      speciality: { $regex: new RegExp(`^${speciality}$`, 'i') }, 
       available: true 
-    }).select("-password"); // Never return passwords!
+    }).select("name email image speciality degree experience about fees address slots_booked");
+    
+    console.log(`[INFO] Found ${doctors.length} doctors for speciality: ${speciality}`);
 
     return doctors;
 
   } catch (error) {
-    console.error("Error finding doctors:", error);
-    return []; // Return empty array so the app doesn't crash
+    console.error("[ERROR] Failed to query doctors:", error.message);
+    return []; 
   }
 };
