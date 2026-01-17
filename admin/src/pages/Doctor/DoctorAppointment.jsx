@@ -10,6 +10,8 @@ const DoctorAppointment = () => {
   const [filter, setFilter] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [isCalling, setIsCalling] = useState(false);
+  const [opdActive, setOpdActive] = useState(false);
+  const [isStartingOpd, setIsStartingOpd] = useState(false);
   
   // Date filter state - defaults to today
   const getTodayStr = () => {
@@ -27,6 +29,42 @@ const DoctorAppointment = () => {
     }
   }, [dToken, getAppointments]);
 
+  // Fetch OPD status on load
+  useEffect(() => {
+    if (dToken && backendUrl) {
+      const fetchStatus = async () => {
+        try {
+          const { data } = await axios.post(backendUrl + '/api/doctor/status', {}, { headers: { dToken } });
+          if (data.success) {
+            setOpdActive(data.opdActive || false);
+          }
+        } catch (error) {
+          console.error("Error fetching OPD status:", error);
+        }
+      };
+      fetchStatus();
+    }
+  }, [dToken, backendUrl]);
+
+  // Start OPD function
+  const startOPD = async () => {
+    setIsStartingOpd(true);
+    try {
+      const { data } = await axios.post(backendUrl + '/api/doctor/start-opd', {}, { headers: { dToken } });
+      
+      if (data.success) {
+        setOpdActive(true);
+        toast.success("🟢 OPD Started! All patients have been notified.");
+      } else {
+        toast.error(data.message);
+      }
+    } catch (error) {
+      toast.error(error.message);
+    } finally {
+      setIsStartingOpd(false);
+    }
+  };
+
   // --- NEW FUNCTION: CALL NEXT PATIENT (Triggers Live Queue) ---
   const callNextPatient = async () => {
     setIsCalling(true);
@@ -35,6 +73,7 @@ const DoctorAppointment = () => {
       
       if (data.success) {
         toast.success(`Calling patient for ${data.currentSlotTime}!`);
+        setOpdActive(false);  // Turn off OPD waiting mode, queue is now active
         // We re-fetch appointments to reflect changes if needed
         getAppointments(); 
       } else {
@@ -262,7 +301,37 @@ const DoctorAppointment = () => {
             {/* --- RIGHT SIDE: ACTIONS --- */}
             <div className="flex items-center gap-4">
                 
-                {/* === THE NEW CALL NEXT BUTTON === */}
+                {/* === START OPD BUTTON === */}
+                {selectedDate === getTodayStr() && !opdActive && (
+                  <button 
+                    onClick={startOPD}
+                    disabled={isStartingOpd}
+                    className="cursor-pointer flex items-center gap-2 bg-emerald-500 text-white px-5 py-2.5 rounded-xl font-bold text-sm shadow-md shadow-emerald-200 hover:bg-emerald-600 hover:scale-105 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                      {isStartingOpd ? (
+                          <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                          </svg>
+                      ) : (
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                      )}
+                      <span>{isStartingOpd ? 'Starting...' : 'Start OPD'}</span>
+                  </button>
+                )}
+
+                {/* OPD Active Indicator */}
+                {selectedDate === getTodayStr() && opdActive && (
+                  <div className="flex items-center gap-2 bg-emerald-50 text-emerald-700 px-4 py-2.5 rounded-xl font-bold text-sm border border-emerald-200">
+                      <span className="relative flex h-3 w-3">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
+                      </span>
+                      <span>OPD Active</span>
+                  </div>
+                )}
+
+                {/* === THE CALL NEXT BUTTON === */}
                 {selectedDate === getTodayStr() ? (
                   <button 
                     onClick={callNextPatient}
@@ -435,7 +504,7 @@ const DoctorAppointment = () => {
                      {selectedDate === getTodayStr() ? "Your schedule is currently clear for today." : `No appointments on ${slotDateFormat(selectedDate)}.`}
                   </p>
                   {(searchTerm || filter !== 'all' || selectedDate !== getTodayStr()) && (
-                     <button onClick={() => {setSearchTerm(''); setFilter('all'); setSelectedDate(getTodayStr());}} className="cursor-pointer px-6 py-2 bg-blue-100 text-blue-600 rounded-full font-bold text-sm hover:bg-blue-200 transition">View Today's Appointments</button>
+                     <button onClick={() => {setSearchTerm(''); setFilter('all'); setSelectedDate(getTodayStr());}} className="cursor-pointer px-6 py-2 bg-blue-100 text-blue-600 rounded-full font-bold text-sm hover:bg-blue-200 transition">View Today&apos;s Appointments</button>
                   )}
                </div>
             )}
