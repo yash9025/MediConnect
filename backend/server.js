@@ -13,24 +13,21 @@ import labRoutes from "./routes/labRoutes.js";
 import chatRouter from "./routes/chatRoute.js";
 
 const PORT = process.env.PORT || 4000;
-const CLIENT_URL = process.env.CLIENT_URL || "*";
 
 const app = express();
 const httpServer = createServer(app);
 
 const io = new Server(httpServer, {
   cors: {
-    origin: CLIENT_URL,
+    origin: "*",
     methods: ["GET", "POST"],
-    credentials: true
   },
 });
 
 app.set("io", io);
 
-// Middleware
 app.use(express.json());
-app.use(cors({ origin: CLIENT_URL }));
+app.use(cors());
 
 // Database Connections
 (async () => {
@@ -44,14 +41,12 @@ app.use(cors({ origin: CLIENT_URL }));
   }
 })();
 
-// Routes
 app.use("/api/admin", adminRouter);
 app.use("/api/doctor", doctorRouter);
 app.use("/api/user", userRouter);
 app.use("/api/lab", labRoutes);
 app.use("/api/chat", chatRouter);
 
-// Health Check
 app.get("/", (req, res) => res.send("MediConnect API Service Running"));
 app.get("/ping", (req, res) => {
   res.status(200).json({ 
@@ -61,14 +56,12 @@ app.get("/ping", (req, res) => {
   });
 });
 
-// Socket Events
 io.on("connection", (socket) => {
   socket.on("join-doctor-room", (docId) => {
     socket.join(`doctor_${docId}`);
   });
 });
 
-// Global Error Handler
 app.use((err, req, res, next) => {
   console.error("Uncaught Error:", err.stack);
   res.status(500).json({ 
@@ -82,7 +75,6 @@ const server = httpServer.listen(PORT, () => {
   console.log(`Server listening on port ${PORT}`);
 });
 
-// Graceful Shutdown
 const gracefulShutdown = () => {
   console.log("Received shutdown signal. Closing HTTP server...");
   server.close(() => {
