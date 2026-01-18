@@ -3,14 +3,12 @@ import userModel from "../models/userModel.js";
 import nodemailer from "nodemailer";
 
 // 1. User Requests Verification
-export const requestVerification = async (req, res) => {
+const requestVerification = async (req, res) => {
   try {
     const { reportId, doctorId } = req.body;
 
     if (!reportId || !doctorId) {
-      return res
-        .status(400)
-        .json({ success: false, message: "Missing Report ID or Doctor ID" });
+      return res.status(400).json({ success: false, message: "Missing Report ID or Doctor ID" });
     }
 
     await reportModel.findByIdAndUpdate(reportId, {
@@ -19,6 +17,7 @@ export const requestVerification = async (req, res) => {
     });
 
     res.json({ success: true, message: "Sent to doctor for authorization." });
+
   } catch (error) {
     console.error("Request Verification Error:", error);
     res.status(500).json({ success: false, message: error.message });
@@ -26,17 +25,14 @@ export const requestVerification = async (req, res) => {
 };
 
 // 2. Doctor Fetches Pending Reports (For Doctor Panel)
-export const getPendingReports = async (req, res) => {
+const getPendingReports = async (req, res) => {
   try {
     const { docId } = req.body;
 
     if (!docId) {
-      return res
-        .status(400)
-        .json({ success: false, message: "Doctor ID is required" });
+      return res.status(400).json({ success: false, message: "Doctor ID is required" });
     }
 
-    // Find pending reports assigned to this doctor, sorted by newest first
     const reports = await reportModel
       .find({
         assignedDoctorId: docId,
@@ -45,6 +41,7 @@ export const getPendingReports = async (req, res) => {
       .sort({ createdAt: -1 });
 
     res.json({ success: true, reports });
+
   } catch (error) {
     console.error("Fetch Reports Error:", error);
     res.status(500).json({ success: false, message: error.message });
@@ -52,45 +49,36 @@ export const getPendingReports = async (req, res) => {
 };
 
 // 3. Doctor Verifies & Sends Email
-export const verifyReport = async (req, res) => {
+const verifyReport = async (req, res) => {
   try {
     const { reportId, doctorNotes } = req.body;
 
     if (!reportId || !doctorNotes) {
-      return res
-        .status(400)
-        .json({ success: false, message: "Details missing." });
+      return res.status(400).json({ success: false, message: "Details missing." });
     }
 
-    // 1. Fetch Report and User details first (DO NOT update yet)
     const report = await reportModel.findById(reportId);
     if (!report) {
-      return res
-        .status(404)
-        .json({ success: false, message: "Report not found." });
+      return res.status(404).json({ success: false, message: "Report not found." });
     }
 
     const user = await userModel.findById(report.userId);
     if (!user || !user.email) {
-      // If there's no email, we cannot fulfill the "mail must be successful" rule
       return res.status(400).json({
         success: false,
-        message:
-          "Patient email not found. Cannot verify because notification is required.",
+        message: "Patient email not found. Cannot verify because notification is required.",
       });
     }
 
-    // 2. Attempt Email Logic FIRST
-    // We do this before updating the database.
+    // --- Email Logic ---
     const transporter = nodemailer.createTransport({
       host: "smtp.gmail.com",
       port: 465,
-      secure: true, // Must be true
+      secure: true,
       auth: {
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_PASS,
       },
-      // Add this strictly for debugging connection issues
       connectionTimeout: 10000,
     });
 
@@ -102,48 +90,43 @@ export const verifyReport = async (req, res) => {
         <div style="font-family: sans-serif; padding: 20px; border: 1px solid #e5e7eb; border-radius: 12px; max-width: 600px; color: #374151;">
             <h2 style="color: #059669;">Report Verified</h2>
             <p>Hello <strong>${user.name}</strong>,</p>
-            <p>Your medical report has been reviewed by our expert. Please find the summary of their assessment below:</p>
-            
+            <p>Your medical report has been reviewed by our expert. Please find the summary below:</p>
             <div style="background-color: #f0fdf4; border-left: 4px solid #16a34a; padding: 20px; border-radius: 8px; margin: 20px 0;">
                 <strong style="color: #166534; font-size: 16px;">🩺 Doctor's Advice:</strong>
                 <p style="color: #14532d; line-height: 1.6; margin-top: 10px;">${doctorNotes}</p>
             </div>
-
             <p style="font-size: 12px; color: #6b7280; margin-top: 20px;">
-                This is an automated notification from MediConnect. If you have further questions, please log in to your dashboard.
+                MediConnect Automated Notification.
             </p>
         </div>
-    `,
+      `,
     };
 
-    // This line will throw an error if the email fails (e.g., auth error, network error)
     await transporter.sendMail(mailOptions);
 
-    // 3. ONLY if the code reaches here (Email Success), update the Database
-    const updatedReport = await reportModel.findByIdAndUpdate(
+    // Database Update (Only if Email Succeeds) 
+    await reportModel.findByIdAndUpdate(
       reportId,
       {
         verificationStatus: "Verified",
         doctorNotes: doctorNotes,
         authorizedDate: new Date(),
       },
-      { new: true },
+      { new: true }
     );
 
     res.json({
       success: true,
       message: "Email sent successfully and report marked as verified!",
     });
+
   } catch (error) {
     console.error("Verification/Email Error:", error);
-
-    // If an error occurs (like email failure), the DB update never happens.
-    // We return a 500 error so the Frontend knows to keep the report in the 'Pending' list.
     res.status(500).json({
       success: false,
-      message: `Action failed: ${
-        error.message || "Internal Server Error"
-      }. The report has NOT been verified.`,
+      message: `Action failed: ${error.message || "Internal Server Error"}. Report NOT verified.`,
     });
   }
 };
+
+export { requestVerification, getPendingReports, verifyReport };
