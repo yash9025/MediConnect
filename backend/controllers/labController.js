@@ -52,7 +52,7 @@ const processPdf = async (filePath) => {
     use_filename: true,
   });
 
-  const pdfBuffer = fs.readFileSync(filePath);
+  const pdfBuffer = await fs.promises.readFile(filePath);
   
   // Enforce structured output from Gemini
   const extractionSchema = {
