@@ -83,11 +83,15 @@ export const verifyReport = async (req, res) => {
     // 2. Attempt Email Logic FIRST
     // We do this before updating the database.
     const transporter = nodemailer.createTransport({
-      service: "gmail",
+      host: "smtp.gmail.com",
+      port: 465,
+      secure: true, // Must be true
       auth: {
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_PASS,
       },
+      // Add this strictly for debugging connection issues
+      connectionTimeout: 10000,
     });
 
     const mailOptions = {
@@ -123,7 +127,7 @@ export const verifyReport = async (req, res) => {
         doctorNotes: doctorNotes,
         authorizedDate: new Date(),
       },
-      { new: true }
+      { new: true },
     );
 
     res.json({
