@@ -1,4 +1,4 @@
-import React, { useContext, useEffect, useState } from 'react';
+import  { useContext, useEffect, useState } from 'react';
 import { AppContext } from '../context/AppContext';
 import axios from 'axios';
 import { toast } from 'react-toastify';
@@ -11,18 +11,20 @@ const Login = () => {
 
   const [state, setState] = useState('Sign Up');
   const [email, setEmail] = useState('');
-  const [password, setpassword] = useState('');
+  const [password, setPassword] = useState(''); 
   const [name, setName] = useState('');
-
+  const [loading, setLoading] = useState(false); 
   const onSubmitHandler = async (e) => {
     e.preventDefault();
+    setLoading(true); // Disable button
 
     try {
-      if (state == 'Sign Up') {
+      if (state === 'Sign Up') {
         const { data } = await axios.post(backendUrl + '/api/user/register', { name, password, email });
         if (data.success) {
           localStorage.setItem('token', data.token);
           setToken(data.token);
+          toast.success("Account created successfully!");
         } else {
           toast.error(data.message);
         }
@@ -31,12 +33,15 @@ const Login = () => {
         if (data.success) {
           localStorage.setItem('token', data.token);
           setToken(data.token);
+          toast.success("Logged in successfully!");
         } else {
           toast.error(data.message);
         }
       }
     } catch (error) {
-      toast.error(error.message);
+      toast.error(error.response?.data?.message || error.message);
+    } finally {
+      setLoading(false); // Re-enable button
     }
   };
 
@@ -44,11 +49,12 @@ const Login = () => {
     if (token) {
       navigate('/');
     }
-  }, [token])
+  }, [token, navigate]);
 
   return (
     <form className="max-w-md mx-auto bg-white p-6 rounded-2xl shadow-lg mt-8 mb-8" onSubmit={onSubmitHandler}>
       <div className="flex flex-col items-center space-y-4">
+        
         {/* Heading */}
         <h2 className="text-2xl font-semibold text-gray-800">
           {state === 'Sign Up' ? 'Create Account' : 'Login'}
@@ -57,7 +63,7 @@ const Login = () => {
           Please {state === 'Sign Up' ? 'create an account' : 'login'} to book an appointment
         </p>
 
-        {/* Full Name Field */}
+        {/* Full Name Field (Only for Sign Up) */}
         {state === 'Sign Up' && (
           <div className="w-full">
             <p className="text-gray-700 font-medium">Full Name</p>
@@ -92,7 +98,7 @@ const Login = () => {
             type="password"
             className="w-full px-4 py-2 mt-1 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             value={password}
-            onChange={(e) => setpassword(e.target.value)}
+            onChange={(e) => setPassword(e.target.value)}
             placeholder="Enter your password"
             required
           />
@@ -101,12 +107,15 @@ const Login = () => {
         {/* Submit Button */}
         <button
           type="submit"
-          className="cursor-pointer w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 active:bg-blue-800 transition font-medium"
+          disabled={loading} // Prevent multiple clicks
+          className={`cursor-pointer w-full text-white py-2 rounded-lg font-medium transition ${
+            loading ? 'bg-blue-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700 active:bg-blue-800'
+          }`}
         >
-          {state === 'Sign Up' ? 'Create Account' : 'Login'}
+          {loading ? 'Processing...' : (state === 'Sign Up' ? 'Create Account' : 'Login')}
         </button>
 
-        {/* Conditional Link */}
+        {/* Toggle between Sign Up / Login */}
         {state === 'Sign Up' ? (
           <p className="text-gray-600 text-sm mt-2">
             Already have an account?{' '}
@@ -119,7 +128,7 @@ const Login = () => {
           </p>
         ) : (
           <p className="text-gray-600 text-sm mt-2">
-            Don't have an account?{' '}
+            Don&#39;t have an account?{' '}
             <span
               className="text-blue-600 cursor-pointer hover:underline font-medium"
               onClick={() => setState('Sign Up')}
@@ -129,17 +138,17 @@ const Login = () => {
           </p>
         )}
 
-        {/* --- TEST CREDENTIALS BOX --- */}
+        {/* --- TEST CREDENTIALS BOX (Keep this for easy testing) --- */}
         <div className="w-full mt-6 p-4 bg-blue-50 border border-blue-100 rounded-xl">
           <p className="text-xs font-bold text-blue-800 uppercase tracking-wider mb-2">Patient Test Account</p>
           <div className="space-y-1">
             <p className="text-sm text-gray-700 font-medium flex justify-between">
               <span>Email:</span> 
-              <span className="text-blue-700">agrawal6353@gmail.com</span>
+              <span className="text-blue-700 font-mono select-all">agrawal6353@gmail.com</span>
             </p>
             <p className="text-sm text-gray-700 font-medium flex justify-between">
               <span>Password:</span> 
-              <span className="text-blue-700">12345678</span>
+              <span className="text-blue-700 font-mono select-all">12345678</span>
             </p>
           </div>
         </div>
