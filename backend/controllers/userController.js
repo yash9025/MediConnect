@@ -114,8 +114,6 @@ const updateProfile = async (req, res) => {
 
 // --- Appointment Logic ---
 
-
-
 const bookAppointment = async (req, res) => {
   try {
     const { docId, slotDate, slotTime } = req.body;
