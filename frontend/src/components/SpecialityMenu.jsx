@@ -8,12 +8,12 @@ const SpecialityMenu = () => {
   };
 
   return (
-    <motion.div
+    <motion.section
       id="speciality"
-      className="relative text-black py-16 w-full bg-gray-50"
-      initial={{ opacity: 0, y: 50 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -50 }}
+      className="relative text-black py-16 w-full bg-gray-50 min-h-[400px]"
+      initial={{ opacity: 0 }}
+      whileInView={{ opacity: 1 }}
+      viewport={{ once: true }}
       transition={{ duration: 0.5 }}
     >
       {/* Floating Background Elements */}
@@ -23,9 +23,9 @@ const SpecialityMenu = () => {
       <div className="flex flex-col lg:flex-row justify-between items-center px-8 md:px-16 lg:px-24 max-w-[1400px] mx-auto relative z-10">
         {/* Left Side */}
         <div className="w-full lg:w-1/2 text-center lg:text-left mb-8 lg:mb-0">
-          <h1 className="text-3xl md:text-4xl font-extrabold leading-tight">
+          <h2 className="text-3xl md:text-4xl font-extrabold leading-tight">
             Explore Doctors by <span className="text-yellow-400">Speciality</span>
-          </h1>
+          </h2>
           <p className="text-base md:text-lg text-gray-700 max-w-lg mx-auto lg:mx-0 mt-2">
             Find trusted doctors in various specialities and book appointments easily.
           </p>
@@ -45,6 +45,8 @@ const SpecialityMenu = () => {
                   <img
                     src={item.image}
                     alt={item.speciality}
+                    width="72"
+                    height="72"
                     className="w-18 h-18 object-cover rounded-full"
                   />
                 </div>
@@ -54,7 +56,7 @@ const SpecialityMenu = () => {
           ))}
         </div>
       </div>
-    </motion.div>
+    </motion.section>
   );
 };
 

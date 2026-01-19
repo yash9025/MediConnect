@@ -10,6 +10,7 @@ import reportModel from "../models/reportModel.js";
 import doctorModel from "../models/doctorModel.js";
 import { findMatchingDoctors } from "../utils/doctorServices.js";
 import * as dotenv from "dotenv";
+import { traceable } from "langsmith/traceable"; 
 
 dotenv.config();
 
@@ -42,7 +43,7 @@ const getVectorStore = async () => {
 };
 
 // Uploads PDF to Cloudinary and uses Gemini to extract structured JSON
-const processPdf = async (filePath) => {
+const processPdf = traceable(async (filePath) => {
   console.log(`[INFO] Processing PDF: ${filePath}`);
   
   const cloudResponse = await cloudinary.uploader.upload(filePath, {
@@ -54,7 +55,6 @@ const processPdf = async (filePath) => {
 
   const pdfBuffer = await fs.promises.readFile(filePath);
   
-  // Enforce structured output from Gemini
   const extractionSchema = {
     description: "Lab Report Extraction",
     type: SchemaType.OBJECT,
@@ -93,9 +93,10 @@ const processPdf = async (filePath) => {
   return {
     url: cloudResponse.secure_url.endsWith('.pdf') ? cloudResponse.secure_url : `${cloudResponse.secure_url}.pdf`,
     patientName: parsed.patient_name || "Unknown",
-    allResults: parsed.test_results || []
+    allResults: parsed.test_results || [],
+    _debug_tokens: result.response.usageMetadata
   };
-};
+}, { name: "Gemini_PDF_Extraction" });
 
 // Uses LLM to generate a medical search query from raw lab results
 const expandQueryWithLLM = async (abnormalResults, userSymptoms) => {
@@ -131,7 +132,7 @@ const retrieveMedicalContext = async (abnormalResults, userSymptoms) => {
   }));
 };
 
-const generateDiagnosis = async (abnormalResults, symptoms, contexts, availableSpecialties) => {
+const generateDiagnosis = traceable(async (abnormalResults, symptoms, contexts, availableSpecialties) => {
   console.log("[INFO] Generating diagnosis...");
   const specialistsList = availableSpecialties.join(", ");
   
@@ -162,7 +163,10 @@ const generateDiagnosis = async (abnormalResults, symptoms, contexts, availableS
 
   const diagnosis = JSON.parse(result.response.text());
 
-  // Hallucination check: Force fallback if LLM recommends a specialist not in DB
+  // This extracts the token count from Google's hidden field and attaches it to your output
+  diagnosis._debug_tokens = result.response.usageMetadata;
+
+  // Hallucination check
   if (!availableSpecialties.includes(diagnosis.recommended_specialist)) {
     console.warn(`[WARN] Invalid specialist '${diagnosis.recommended_specialist}'. Using fallback.`);
     const fallback = availableSpecialties.find(s => s.toLowerCase().includes("general")) || availableSpecialties[0];
@@ -170,7 +174,7 @@ const generateDiagnosis = async (abnormalResults, symptoms, contexts, availableS
   }
   
   return diagnosis;
-};
+}, { name: "Gemini_Diagnosis_Gen" });
 
 export const analyzeReport = async (req, res) => {
   const localPath = req.file?.path;
