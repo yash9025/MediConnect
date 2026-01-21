@@ -107,7 +107,7 @@ The system bridges the gap between **Diagnosis** and **Action**:
 <img src="./databse-mediconnect.png" alt="Database Schema" width="100%" />
 
 ### Processing Pipeline
-<img src="./pipeline.png" alt="Pipeline Flow" width="100%" />
+<img src="./Rag-Pipeline.png" alt="Pipeline Flow" width="100%" />
 
 ---
 
