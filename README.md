@@ -48,8 +48,6 @@ Patients shouldn't need to visit a hospital just to show a lab report.
 * **Asynchronous Diagnosis:** Doctors verify the AI flags and trigger server-side email diagnoses, removing the need for physical follow-ups for stable results.
 * **Impact:** Cut redundant hospital visits by **60%**.
 
----
-
 ## 🛡️ Performance & Security
 
 * **Compliance-First:** Established granular **Role-Based Access Control (RBAC)** to ensure data privacy and security.
