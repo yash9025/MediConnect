@@ -227,9 +227,9 @@ const LiveQueue = ({ docId, mySlotTime }) => {
                     <span className="relative inline-flex rounded-full h-4 w-4 bg-red-500"></span>
                 </span>
             </div>
-            <h3 className="text-lg font-bold text-red-800 mb-2">🔴 Doctor is in OPD</h3>
+            <h3 className="text-lg font-bold text-red-800 mb-2">🔴 Doctor is in OT</h3>
             <p className="text-red-600 text-sm mb-3 leading-relaxed">
-                The doctor has started seeing patients. Your slot is at <b className="text-red-700">{mySlotTime}</b>.
+                The doctor has started Emergency Operation. Your slot is at <b className="text-red-700">{mySlotTime}</b>.
             </p>
             <div className="bg-white border border-red-100 rounded-xl p-3 mb-3">
                 <p className="text-xs text-red-500 font-medium uppercase tracking-wide mb-1">We Recommend</p>
