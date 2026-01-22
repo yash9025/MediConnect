@@ -19,9 +19,9 @@
 
 ## 🏥 The Problem
 The current healthcare journey is fragmented and slow:
-* **Confusion:** Patients struggle to understand complex lab reports.
-* **Delay:** Critical conditions are often missed while waiting for appointments.
-* **Inefficiency:** Doctors spend valuable time explaining basic metrics rather than treating.
+* **Concurrency: Fixing the "Domino Effect" :** Traditional appointment systems are static. One late patient causes a cascading delay, leading to crowded waiting rooms and angry users..
+* **Integrity: Taming LLM Hallucinations:** You cannot trust a generic LLM with medical data. Hallucination in healthcare is a liability.
+* **Workflow: Killing the "Report-Only" Visit :** Patients need to visit a hospital just to show a report.
 * **Disconnection:** Patients don't know *which* specialist to book based on their symptoms.
 
 ---
