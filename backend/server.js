@@ -48,6 +48,7 @@ app.use("/api/lab", labRoutes);
 app.use("/api/chat", chatRouter);
 
 app.get("/", (req, res) => res.send("MediConnect API Service Running"));
+
 app.get("/ping", (req, res) => {
   res.status(200).json({ 
     status: "active", 
