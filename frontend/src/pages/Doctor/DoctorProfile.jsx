@@ -20,7 +20,7 @@ const DoctorProfile = () => {
         about: profileData.about // Included about in payload
       };
 
-      const { data } = await axios.post(backendUrl + '/api/doctor/update-profile', updateData, { headers: { dToken } });
+      const { data } = await axios.post(backendUrl + '/api/doctor/update-profile', updateData, { headers: { Authorization: `Bearer ${dToken}` } });
 
       if (data.success) {
         toast.success(data.message);
@@ -47,7 +47,7 @@ const DoctorProfile = () => {
         available: newAvailability
       };
 
-      const { data } = await axios.post(backendUrl + '/api/doctor/update-profile', updateData, { headers: { dToken } });
+      const { data } = await axios.post(backendUrl + '/api/doctor/update-profile', updateData, { headers: { Authorization: `Bearer ${dToken}` } });
 
       if (data.success) {
         toast.success(data.message);

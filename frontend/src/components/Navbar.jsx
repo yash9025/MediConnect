@@ -3,19 +3,27 @@ import { NavLink, useNavigate } from "react-router-dom";
 import { assets } from "../assets/assets.js";
 import { AppContext } from "../context/AppContext.jsx";
 
+const roleHomeMap = {
+    admin: '/admin/dashboard',
+    doctor: '/doctor/dashboard',
+    patient: '/'
+};
+
 const Navbar = () => {
     const navigate = useNavigate();
 
-    const { token, setToken, userData } = useContext(AppContext);
+    const { token, logout: appLogout, userData, role } = useContext(AppContext);
 
     const [showMenu, setShowMenu] = useState(false);
 
 
     const logout = () => {
-        setToken(false)
-        localStorage.removeItem('token')
-        navigate('/')
-    }
+        appLogout();
+        navigate('/');
+    };
+
+    const isPatientSession = Boolean(token) && role === 'patient';
+    const isPanelSession = Boolean(token) && (role === 'admin' || role === 'doctor');
 
     const [showProfileMenu, setShowProfileMenu] = useState(false);
 
@@ -82,33 +90,29 @@ const Navbar = () => {
                         Contact
                     </NavLink>
                 </li>
-                <li>
-                    <a
-                        href="https://mediconnect-admin-wlzf.onrender.com"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="bg-green-600 text-white px-4 py-2 rounded-full text-sm hover:bg-green-700 transition-all duration-200"
-                    >
-                        Admin Panel
-                    </a>
-                </li>
 
             </ul>
 
             {/* Buttons Section */}
             <div className="flex items-center space-x-3">
-                {token && userData ? (
+                {isPatientSession ? (
                     <div className="relative inline-block text-left">
                         {/* Trigger: Profile + Icon */}
                         <div 
                             className="flex items-center space-x-2 cursor-pointer" 
                             onClick={() => setShowProfileMenu(!showProfileMenu)}
                         >
-                            <img
-                                className="w-9 h-9 rounded-full border border-green-400 shadow-sm transition-transform duration-300 hover:scale-105"
-                                src={userData.image}
-                                alt="Profile"
-                            />
+                            {role === 'patient' && userData?.image ? (
+                                <img
+                                    className="w-9 h-9 rounded-full border border-green-400 shadow-sm transition-transform duration-300 hover:scale-105"
+                                    src={userData.image}
+                                    alt="Profile"
+                                />
+                            ) : (
+                                <div className="w-9 h-9 rounded-full border border-green-400 shadow-sm bg-green-50 text-green-700 font-semibold flex items-center justify-center uppercase">
+                                    {role?.[0] || 'U'}
+                                </div>
+                            )}
                             <img
                                 className="w-3 transform transition-transform duration-300"
                                 src={assets.dropdown_icon}
@@ -119,18 +123,29 @@ const Navbar = () => {
                         {/* Dropdown Menu */}
                         <div className={`absolute right-0 top-full mt-1 w-44 bg-white shadow-md rounded-md text-gray-700 text-sm font-medium z-20 transition-all duration-200 ${showProfileMenu ? 'opacity-100 visible' : 'opacity-0 invisible'}`}>
                             <div className="p-2 space-y-1">
-                                <p
-                                    onClick={() => { navigate("/my-profile"); setShowProfileMenu(false); }}
-                                    className="hover:bg-gray-100 p-2 rounded cursor-pointer"
-                                >
-                                    My Profile
-                                </p>
-                                <p
-                                    onClick={() => { navigate("/my-appointments"); setShowProfileMenu(false); }}
-                                    className="hover:bg-gray-100 p-2 rounded cursor-pointer"
-                                >
-                                    My Appointments
-                                </p>
+                                {role === 'patient' ? (
+                                    <>
+                                        <p
+                                            onClick={() => { navigate("/my-profile"); setShowProfileMenu(false); }}
+                                            className="hover:bg-gray-100 p-2 rounded cursor-pointer"
+                                        >
+                                            My Profile
+                                        </p>
+                                        <p
+                                            onClick={() => { navigate("/my-appointments"); setShowProfileMenu(false); }}
+                                            className="hover:bg-gray-100 p-2 rounded cursor-pointer"
+                                        >
+                                            My Appointments
+                                        </p>
+                                    </>
+                                ) : (
+                                    <p
+                                        onClick={() => { navigate(roleHomeMap[role] || '/'); setShowProfileMenu(false); }}
+                                        className="hover:bg-gray-100 p-2 rounded cursor-pointer"
+                                    >
+                                        Go to Dashboard
+                                    </p>
+                                )}
                                 <p
                                     onClick={() => { logout(); setShowProfileMenu(false); }}
                                     className="hover:bg-red-100 text-red-500 p-2 rounded cursor-pointer"
@@ -142,9 +157,24 @@ const Navbar = () => {
                     </div>
 
 
+                ) : isPanelSession ? (
+                    <div className="flex items-center gap-2">
+                        <button
+                            onClick={() => navigate(roleHomeMap[role] || '/')}
+                            className="cursor-pointer px-3 py-1.5 bg-green-600 text-white font-medium rounded-md shadow-sm transition-all duration-300 hover:scale-105 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-green-400 focus:ring-opacity-75"
+                        >
+                            Dashboard
+                        </button>
+                        <button
+                            onClick={logout}
+                            className="cursor-pointer px-3 py-1.5 bg-red-500 text-white font-medium rounded-md shadow-sm transition-all duration-300 hover:scale-105 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-red-400 focus:ring-opacity-75"
+                        >
+                            Logout
+                        </button>
+                    </div>
                 ) : (
                     <button
-                        onClick={() => navigate("/login")}
+                        onClick={() => navigate("/signup")}
                         className="cursor-pointer px-4 py-1.5 bg-blue-500 text-white font-medium rounded-md shadow-sm transition-all duration-300 hover:scale-105 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-opacity-75"
                     >
                         Create Account
@@ -216,16 +246,6 @@ const Navbar = () => {
                                     >
                                         Contact
                                     </NavLink>
-                                </li>
-                                <li>
-                                    <a
-                                        href="https://mediconnect-admin-wlzf.onrender.com"
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="bg-green-600 text-white px-4 py-2 rounded-full text-sm hover:bg-green-700 transition-all duration-200"
-                                    >
-                                        Admin Panel
-                                    </a>
                                 </li>
                             </ul>
                         </div>

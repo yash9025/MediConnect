@@ -1,6 +1,6 @@
 import  { useContext, useEffect, useState } from 'react';
 import { AdminContext } from '../../context/AdminContext';
-import { assets } from '../../assets/assets'; 
+import { assets } from '../../assets/admin/assets'; 
 
 const DoctorList = () => {
   const { doctors, aToken, getAllDoctors, changeAvailability } = useContext(AdminContext);

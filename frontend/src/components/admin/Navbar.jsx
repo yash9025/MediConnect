@@ -1,22 +1,23 @@
 import React, { useContext } from "react";
-import { assets } from "../assets/assets";
-import { AdminContext } from "../context/AdminContext";
+import { assets } from "../../assets/admin/assets";
+import { AdminContext } from "../../context/AdminContext";
 import {useNavigate} from 'react-router-dom';
-import { DoctorContext } from "../context/DoctorContext";
+import { DoctorContext } from "../../context/DoctorContext";
+import { AppContext } from "../../context/AppContext";
 
 
 const Navbar = () => {
     const { aToken, setAToken } = useContext(AdminContext);
     const {dToken , setDToken} = useContext(DoctorContext);
+    const { logout: appLogout } = useContext(AppContext);
 
     const navigate = useNavigate();
 
     const logout = () => {
-        navigate('/');
-        aToken && setAToken('') //&& means if
-        aToken && localStorage.removeItem('aToken')
-        dToken && setDToken('')
-        dToken && localStorage.removeItem('dToken')
+        setAToken('');
+        setDToken('');
+        appLogout();
+        navigate('/login', { replace: true });
     }
 
     return (

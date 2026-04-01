@@ -1,10 +1,19 @@
 import React from 'react';
 import { assets } from '../assets/assets';
 import { useNavigate } from 'react-router-dom';
+import { useContext } from 'react';
+import { AppContext } from '../context/AppContext';
+
+const roleHomeMap = {
+    admin: '/admin/dashboard',
+    doctor: '/doctor/dashboard',
+    patient: '/'
+};
 
 const Banner = () => {
     const navigate = useNavigate();
-    const isLoggedIn = localStorage.getItem('token'); // Replace with actual auth logic
+    const { token, role } = useContext(AppContext);
+    const isLoggedIn = Boolean(token);
 
     return (
         <div className="relative bg-gradient-to-br from-blue-600 to-green-500 text-white overflow-hidden py-12 w-full mx-auto rounded-none shadow-lg">
@@ -22,11 +31,11 @@ const Banner = () => {
                         Consult Top-Rated Doctors Anytime, Anywhere.
                     </p>
                     {isLoggedIn ? (
-                        <button onClick={() => {navigate('/doctors'); scrollTo(0,0); }} className="bg-white text-blue-600 font-semibold py-3 px-6 rounded-full shadow-md transition-all duration-300 cursor-pointer transform hover:scale-105 hover:bg-gray-200">
-                            Book Appointment
+                        <button onClick={() => { navigate(role === 'patient' ? '/doctors' : (roleHomeMap[role] || '/')); scrollTo(0,0); }} className="bg-white text-blue-600 font-semibold py-3 px-6 rounded-full shadow-md transition-all duration-300 cursor-pointer transform hover:scale-105 hover:bg-gray-200">
+                            {role === 'patient' ? 'Book Appointment' : 'Go to Dashboard'}
                         </button>
                     ) : (
-                        <button onClick={() => { navigate('/login'); scrollTo(0, 0); }} className="bg-white text-blue-600 font-semibold py-3 px-6 rounded-full shadow-md transition-all duration-300 cursor-pointer transform hover:scale-105 hover:bg-gray-200">
+                        <button onClick={() => { navigate('/signup'); scrollTo(0, 0); }} className="bg-white text-blue-600 font-semibold py-3 px-6 rounded-full shadow-md transition-all duration-300 cursor-pointer transform hover:scale-105 hover:bg-gray-200">
                             Create Account
                         </button>
                     )}

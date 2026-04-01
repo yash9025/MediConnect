@@ -1,6 +1,6 @@
 import  { useContext, useEffect } from "react";
 import { AdminContext } from "../../context/AdminContext";
-import { assets } from "../../assets/assets";
+import { assets } from "../../assets/admin/assets";
 import { AppContext } from "../../context/AppContext";
 
 const AdminDashboard = () => {

@@ -3,23 +3,45 @@ import axios from 'axios';
 import {toast} from 'react-toastify';
 
 export const AdminContext = createContext(); 
-// This context will allow us to share data across multiple components without prop drilling.
+
+const decodeRole = (token) => {
+    try {
+        const payloadPart = token?.split('.')?.[1];
+        if (!payloadPart) return null;
+
+        const base64 = payloadPart.replace(/-/g, '+').replace(/_/g, '/');
+        return JSON.parse(atob(base64))?.role || null;
+    } catch {
+        return null;
+    }
+};
 
 const AdminContextProvider = (props) => {
-    // If we have a token in localStorage, the admin will remain logged in even after a page refresh.
-    const [aToken, setAToken] = useState(localStorage.getItem('aToken')?localStorage.getItem('aToken'):'');
+    const initialToken = localStorage.getItem('token') || '';
+    const [aToken, setATokenState] = useState(decodeRole(initialToken) === 'admin' ? initialToken : '');
     const [doctors , setDoctors] = useState([]);
     const [appointments,setAppointments] = useState([]);
     const [dashData , setDashData] = useState(false);
 
     const backendUrl = import.meta.env.VITE_BACKEND_URL; 
-    // The backend is running on localhost:4000, so I have connected it to the admin panel.
+
+    const setAToken = (nextToken) => {
+        if (!nextToken) {
+            setATokenState('');
+            return;
+        }
+
+        localStorage.setItem('token', nextToken);
+        setATokenState(nextToken);
+    };
+
+    const authHeaders = aToken ? { Authorization: `Bearer ${aToken}` } : {};
 
 const getAllDoctors = async () => {
+    if (!aToken) return;
     
     try {
-        
-        const {data} = await axios.post(backendUrl + '/api/admin/all-doctors' , {}, {headers:{aToken}}); //fetching the data getting at the endpoint /api/admin/all-docotrs from backend
+        const {data} = await axios.post(backendUrl + '/api/admin/all-doctors' , {}, { headers: authHeaders });
         if(data.success){
             setDoctors(data.doctors);
             console.log(data.doctors);
@@ -32,20 +54,22 @@ const getAllDoctors = async () => {
     }
 }
 
-    // Sync state changes with localStorage to ensure token persistence across refreshes.
     useEffect(() => {
-        if (aToken) {
-            localStorage.setItem('aToken', aToken); // Store token in localStorage if it exists.
-        } else {
-            localStorage.removeItem('aToken'); // Remove token from localStorage if it's null or empty.
-        }
-    }, [aToken]); // Runs whenever aToken changes
+        const syncFromStorage = () => {
+            const token = localStorage.getItem('token') || '';
+            setATokenState(decodeRole(token) === 'admin' ? token : '');
+        };
+
+        window.addEventListener('storage', syncFromStorage);
+        return () => window.removeEventListener('storage', syncFromStorage);
+    }, []);
 
 
     const changeAvailability = async (docId) => {
+        if (!aToken) return;
         
         try {
-            const {data} = await axios.post(backendUrl + '/api/admin/change-availability' , {docId} , {headers:{aToken}});
+            const {data} = await axios.post(backendUrl + '/api/admin/change-availability' , {docId} , { headers: authHeaders });
             if(data.success){
                 toast.success(data.message)
                 getAllDoctors();
@@ -59,10 +83,11 @@ const getAllDoctors = async () => {
     }
 
     const getAllAppointments = async () => {
+        if (!aToken) return;
         
         try {
             
-            const {data} = await axios.get(backendUrl + '/api/admin/appointments' , {headers:{aToken}});
+            const {data} = await axios.get(backendUrl + '/api/admin/appointments' , { headers: authHeaders });
             if(data.success){
                 setAppointments(data.appointments)
             }else{
@@ -74,10 +99,11 @@ const getAllDoctors = async () => {
     }
 
     const cancelAppointment= async (appointmentId) => {
+        if (!aToken) return;
         
         try {
 
-            const {data} = await axios.post(backendUrl + '/api/admin/cancel-appointment', {appointmentId} , {headers:{aToken}});
+            const {data} = await axios.post(backendUrl + '/api/admin/cancel-appointment', {appointmentId} , { headers: authHeaders });
             if(data.success){
                 toast.success(data.message);
                 getAllAppointments();
@@ -91,10 +117,11 @@ const getAllDoctors = async () => {
     }
 
     const getDashData = async () => {
+        if (!aToken) return;
         
         try {
             
-            const {data} = await axios.get(backendUrl + '/api/admin/dashboard' ,{headers:{aToken}});
+            const {data} = await axios.get(backendUrl + '/api/admin/dashboard' , { headers: authHeaders });
             if(data.success){
                 setDashData(data.dashData);
                 console.log(data.dashData);

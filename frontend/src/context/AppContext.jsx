@@ -5,6 +5,18 @@ import { toast } from 'react-toastify';
 
 export const AppContext = createContext(null);
 
+const decodeJwtPayload = (token) => {
+    try {
+        const payloadPart = token?.split('.')?.[1];
+        if (!payloadPart) return null;
+
+        const base64 = payloadPart.replace(/-/g, '+').replace(/_/g, '/');
+        return JSON.parse(atob(base64));
+    } catch {
+        return null;
+    }
+};
+
 const AppContextProvider = (props) => {
     const currencySymbol = '$';
     const backendUrl = import.meta.env.VITE_BACKEND_URL;
@@ -12,6 +24,8 @@ const AppContextProvider = (props) => {
     const [doctors, setDoctors] = useState([]);
     const [token, setToken] = useState(localStorage.getItem('token') || '');
     const [userData, setUserData] = useState(null);
+
+    const role = decodeJwtPayload(token)?.role || null;
 
     const getDoctorData = async () => {
         try {
@@ -29,8 +43,20 @@ const AppContextProvider = (props) => {
     };
 
     const loadUserProfileData = async () => {
+        if (!token) {
+            setUserData(null);
+            return;
+        }
+
+        if (role !== 'patient') {
+            setUserData(null);
+            return;
+        }
+
         try {
-            const { data } = await axios.get(backendUrl + '/api/user/get-profile', { headers: { token } });
+            const { data } = await axios.get(backendUrl + '/api/user/get-profile', {
+                headers: { Authorization: `Bearer ${token}` }
+            });
             if (data.success) {
                 setUserData(data.userData);
             } else {
@@ -59,16 +85,28 @@ const AppContextProvider = (props) => {
         } else {
             setUserData(null);
         }
-    }, [token]);
+    }, [token, role]);
 
     return (
         <AppContext.Provider value={{
             doctors, getDoctorData,
             currencySymbol,
+            currency: currencySymbol,
             token, setToken, logout, // 
             backendUrl,
             userData, setUserData,
-            loadUserProfileData
+            loadUserProfileData,
+            role,
+            calculateAge: (dob) => {
+                const today = new Date();
+                const birthDate = new Date(dob);
+                return today.getFullYear() - birthDate.getFullYear();
+            },
+            slotDateFormat: (slotDate) => {
+                const months = [' ', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+                const dateArray = slotDate.split('_');
+                return `${dateArray[0]} ${months[Number(dateArray[1])]} ${dateArray[2]}`;
+            }
         }}>
             {props.children}
         </AppContext.Provider>

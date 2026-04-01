@@ -3,21 +3,47 @@ import axios from 'axios';
 import {toast} from 'react-toastify';
 
 export const DoctorContext = createContext()
-//This context will allow us to share data across multiple components without prop drilling.
+
+const decodeRole = (token) => {
+    try {
+        const payloadPart = token?.split('.')?.[1];
+        if (!payloadPart) return null;
+
+        const base64 = payloadPart.replace(/-/g, '+').replace(/_/g, '/');
+        return JSON.parse(atob(base64))?.role || null;
+    } catch {
+        return null;
+    }
+};
+
 const DoctorContextProvider = (props) => {
 
     const backendUrl = import.meta.env.VITE_BACKEND_URL;
 
-    const [dToken ,setDToken] = useState(localStorage.getItem('dToken')?localStorage.getItem('dToken'):'');
+    const initialToken = localStorage.getItem('token') || '';
+    const [dToken ,setDTokenState] = useState(decodeRole(initialToken) === 'doctor' ? initialToken : '');
     const [appointments,setAppointments] = useState([]);
     const [dashData , setDashData] = useState(false);
     const [profileData , setProfileData] = useState(false);
 
+    const setDToken = (nextToken) => {
+        if (!nextToken) {
+            setDTokenState('');
+            return;
+        }
+
+        localStorage.setItem('token', nextToken);
+        setDTokenState(nextToken);
+    };
+
+    const authHeaders = dToken ? { Authorization: `Bearer ${dToken}` } : {};
+
     const getAppointments = async () => {
+        if (!dToken) return;
         
         try {
             
-            const {data} = await axios.get(backendUrl + '/api/doctor/appointments' , {headers:{dToken}});
+            const {data} = await axios.get(backendUrl + '/api/doctor/appointments' , { headers: authHeaders });
             if(data.success){
                 setAppointments(data.appointments.reverse());
                 // console.log(data.appointments.reverse());
@@ -33,10 +59,11 @@ const DoctorContextProvider = (props) => {
     }
 
     const completeAppointment = async (appointmentId) => {
+        if (!dToken) return;
         
         try {
             
-            const {data} = await axios.post(backendUrl + '/api/doctor/complete-appointment' ,{appointmentId},{headers:{dToken}});
+            const {data} = await axios.post(backendUrl + '/api/doctor/complete-appointment' ,{appointmentId},{ headers: authHeaders });
             if(data.success){
                 toast.success(data.message);
                 getAppointments();
@@ -51,10 +78,11 @@ const DoctorContextProvider = (props) => {
     }
 
     const cancelAppointment = async (appointmentId) => {
+        if (!dToken) return;
         
         try {
             
-            const {data} = await axios.post(backendUrl + '/api/doctor/cancel-appointment' ,{appointmentId},{headers:{dToken}});
+            const {data} = await axios.post(backendUrl + '/api/doctor/cancel-appointment' ,{appointmentId},{ headers: authHeaders });
             if(data.success){
                 toast.success(data.message);
                 getAppointments();
@@ -70,10 +98,11 @@ const DoctorContextProvider = (props) => {
     }
 
     const getDashData = async () => {
+        if (!dToken) return;
         
         try {
             
-            const {data} = await axios.get(backendUrl + '/api/doctor/dashboard' , {headers:{dToken}});
+            const {data} = await axios.get(backendUrl + '/api/doctor/dashboard' , { headers: authHeaders });
             if(data.success){
                 setDashData(data.dashData);
                 console.log(data.dashData);
@@ -89,9 +118,10 @@ const DoctorContextProvider = (props) => {
     }
 
     const getProfileData = async () => {
+                if (!dToken) return;
         try {
             
-          const {data} = await axios.get(backendUrl + '/api/doctor/profile' , {headers:{dToken}});
+                    const {data} = await axios.get(backendUrl + '/api/doctor/profile' , { headers: authHeaders });
           if(data.success){
             setProfileData(data.profileData);
             console.log(data.profileData);

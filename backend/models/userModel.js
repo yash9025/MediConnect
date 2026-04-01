@@ -34,6 +34,11 @@ const userSchema = new mongoose.Schema({
         type:String ,
         default :'0000000000'  
     },
+    role: {
+        type: String,
+        enum: ['patient', 'doctor', 'admin'],
+        default: 'patient'
+    }
 },{})
 
 const userModel = mongoose.models.user ||  mongoose.model('user' , userSchema)

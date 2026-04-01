@@ -1,5 +1,5 @@
 import { useContext, useState } from 'react';
-import { assets } from '../../assets/assets';
+import { assets } from '../../assets/admin/assets';
 import { AdminContext } from '../../context/AdminContext';
 import { toast } from 'react-toastify';
 import axios from 'axios';
@@ -50,7 +50,7 @@ const AddDoctor = () => {
 
             // Sending data to backend with authentication token
             const { data } = await axios.post(backendUrl + '/api/admin/add-doctor', formData, {
-                headers: { atoken: aToken } // Ensure this matches backend expectations
+                headers: { Authorization: `Bearer ${aToken}` }
             });
             
                

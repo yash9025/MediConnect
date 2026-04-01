@@ -34,7 +34,7 @@ const DoctorAppointment = () => {
     if (dToken && backendUrl) {
       const fetchStatus = async () => {
         try {
-          const { data } = await axios.post(backendUrl + '/api/doctor/status', {}, { headers: { dToken } });
+               const { data } = await axios.post(backendUrl + '/api/doctor/status', {}, { headers: { Authorization: `Bearer ${dToken}` } });
           if (data.success) {
             setOpdActive(data.opdActive || false);
           }
@@ -50,7 +50,7 @@ const DoctorAppointment = () => {
   const startOPD = async () => {
     setIsStartingOpd(true);
     try {
-      const { data } = await axios.post(backendUrl + '/api/doctor/start-opd', {}, { headers: { dToken } });
+         const { data } = await axios.post(backendUrl + '/api/doctor/start-opd', {}, { headers: { Authorization: `Bearer ${dToken}` } });
       
       if (data.success) {
         setOpdActive(true);
@@ -69,7 +69,7 @@ const DoctorAppointment = () => {
   const callNextPatient = async () => {
     setIsCalling(true);
     try {
-      const { data } = await axios.post(backendUrl + '/api/doctor/next-patient', {}, { headers: { dToken } });
+         const { data } = await axios.post(backendUrl + '/api/doctor/next-patient', {}, { headers: { Authorization: `Bearer ${dToken}` } });
       
       if (data.success) {
         toast.success(`Calling patient for ${data.currentSlotTime}!`);
@@ -90,7 +90,7 @@ const DoctorAppointment = () => {
     try {
       const { data } = await axios.post(backendUrl + '/api/doctor/mark-absent',
         { appointmentId },
-        { headers: { dToken } }
+            { headers: { Authorization: `Bearer ${dToken}` } }
       );
 
       if (data.success) {
