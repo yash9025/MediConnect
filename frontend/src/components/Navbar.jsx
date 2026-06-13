@@ -91,6 +91,31 @@ const Navbar = () => {
                     </NavLink>
                 </li>
 
+                {/* AI Diagnostics — patient only */}
+                {isPatientSession && (
+                    <li>
+                        <NavLink
+                            to="/ai-diagnostics"
+                            className={({ isActive }) =>
+                                `relative px-3 py-1.5 transition-all duration-300 flex items-center gap-2 rounded-full border shadow-sm hover:shadow-md hover:-translate-y-0.5 ${
+                                    isActive 
+                                        ? "bg-blue-50 border-blue-300 text-blue-700" 
+                                        : "bg-gradient-to-r from-blue-50 to-green-50 border-blue-200 text-blue-700 hover:border-blue-400"
+                                }`
+                            }
+                        >
+                            <span className="font-bold">AI Diagnostics</span>
+                            <span className="flex items-center gap-1.5 text-[10px] font-extrabold bg-white text-blue-700 px-2 py-0.5 rounded-full shadow-sm border border-blue-100 uppercase tracking-wide">
+                                <span className="relative flex h-2 w-2">
+                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-500 opacity-75"></span>
+                                    <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-600"></span>
+                                </span>
+                                V2 Multi-Agent
+                            </span>
+                        </NavLink>
+                    </li>
+                )}
+
             </ul>
 
             {/* Buttons Section */}
@@ -136,6 +161,19 @@ const Navbar = () => {
                                             className="hover:bg-gray-100 p-2 rounded cursor-pointer"
                                         >
                                             My Appointments
+                                        </p>
+                                        <p
+                                            onClick={() => { navigate("/ai-diagnostics"); setShowProfileMenu(false); }}
+                                            className="hover:bg-blue-50 text-blue-700 p-2 rounded cursor-pointer flex items-center justify-between font-semibold bg-gradient-to-r from-blue-50/50 to-transparent"
+                                        >
+                                            AI Diagnostics
+                                            <span className="flex items-center gap-1.5 text-[9px] font-extrabold bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded-full">
+                                                <span className="relative flex h-1.5 w-1.5">
+                                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-500 opacity-75"></span>
+                                                    <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-blue-600"></span>
+                                                </span>
+                                                V2
+                                            </span>
                                         </p>
                                     </>
                                 ) : (
@@ -206,7 +244,7 @@ const Navbar = () => {
                                             `relative transition-all duration-300 hover:text-green-600 ${isActive ? "text-green-600" : ""
                                             }`
                                         }
-                                        onClick={closeMenu}  // Close menu when clicked
+                                        onClick={closeMenu}
                                     >
                                         Home
                                     </NavLink>
@@ -218,7 +256,7 @@ const Navbar = () => {
                                             `relative transition-all duration-300 hover:text-green-600 ${isActive ? "text-green-600" : ""
                                             }`
                                         }
-                                        onClick={closeMenu}  // Close menu when clicked
+                                        onClick={closeMenu}
                                     >
                                         All Doctors
                                     </NavLink>
@@ -230,7 +268,7 @@ const Navbar = () => {
                                             `relative transition-all duration-300 hover:text-green-600 ${isActive ? "text-green-600" : ""
                                             }`
                                         }
-                                        onClick={closeMenu}  // Close menu when clicked
+                                        onClick={closeMenu}
                                     >
                                         About
                                     </NavLink>
@@ -242,11 +280,35 @@ const Navbar = () => {
                                             `relative transition-all duration-300 hover:text-green-600 ${isActive ? "text-green-600" : ""
                                             }`
                                         }
-                                        onClick={closeMenu}  // Close menu when clicked
+                                        onClick={closeMenu}
                                     >
                                         Contact
                                     </NavLink>
                                 </li>
+                                {isPatientSession && (
+                                    <li>
+                                        <NavLink
+                                            to="/ai-diagnostics"
+                                            className={({ isActive }) =>
+                                                `relative p-3 transition-all duration-300 flex items-center justify-between rounded-lg border shadow-sm ${
+                                                    isActive 
+                                                        ? "bg-blue-50 border-blue-300 text-blue-700" 
+                                                        : "bg-gradient-to-r from-blue-50 to-green-50 border-blue-200 text-blue-700"
+                                                }`
+                                            }
+                                            onClick={closeMenu}
+                                        >
+                                            <span className="font-bold">AI Diagnostics</span>
+                                            <span className="flex items-center gap-1.5 text-[10px] font-extrabold bg-white text-blue-700 px-2 py-1 rounded-full shadow-sm border border-blue-100 uppercase tracking-wide">
+                                                <span className="relative flex h-2 w-2">
+                                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-500 opacity-75"></span>
+                                                    <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-600"></span>
+                                                </span>
+                                                V2 Multi-Agent
+                                            </span>
+                                        </NavLink>
+                                    </li>
+                                )}
                             </ul>
                         </div>
                     </div>

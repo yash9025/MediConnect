@@ -9,8 +9,10 @@ import { fileURLToPath } from "url";
 import reportModel from "../models/reportModel.js";
 import doctorModel from "../models/doctorModel.js";
 import { findMatchingDoctors } from "../utils/doctorServices.js";
+import { connection as redisClient } from "../config/redis.js";
 import * as dotenv from "dotenv";
 import { traceable } from "langsmith/traceable"; 
+import crypto from "crypto";
 
 dotenv.config();
 
@@ -116,20 +118,46 @@ const retrieveMedicalContext = async (abnormalResults, userSymptoms) => {
   if (!abnormalResults.length && !userSymptoms) return [];
 
   const expandedQuery = await expandQueryWithLLM(abnormalResults, userSymptoms);
+  
+  // Semantic Caching Strategy (V1)
+  // We hash the normalized query to use as a Redis key. 
+  // In a full Redis Stack deployment, we could use FT.SEARCH for true vector similarity.
+  const normalizedQuery = expandedQuery.toLowerCase().trim();
+  const cacheKey = `rag_cache:${crypto.createHash('sha256').update(normalizedQuery).digest('hex')}`;
+  
+  try {
+    const cachedContext = await redisClient.get(cacheKey);
+    if (cachedContext) {
+      console.log("[INFO] Cache HIT in Redis for RAG context");
+      return JSON.parse(cachedContext);
+    }
+  } catch (err) {
+    console.warn("[WARN] Redis cache error, proceeding without cache:", err.message);
+  }
+
   const vectorStore = await getVectorStore();
   
-  console.log("[INFO] Searching vector store...");
+  console.log("[INFO] Searching Pinecone vector store (Cache MISS)...");
   const results = await vectorStore.similaritySearchWithScore(expandedQuery, CONFIG.RAG_K);
   
   // Filter out low relevance matches to reduce noise
   const filtered = results.filter(([_, score]) => score >= CONFIG.RAG_THRESHOLD);
   const finalResults = filtered.length > 0 ? filtered.slice(0, 5) : results.slice(0, 3);
 
-  return finalResults.map(([doc]) => ({
+  const formattedContexts = finalResults.map(([doc]) => ({
     content: doc.pageContent,
     source: path.basename(doc.metadata.source_file || "Guidelines").replace(".pdf", ""),
     category: doc.metadata.category || "General Medicine"
   }));
+
+  // Store in Redis with a 7-day TTL (604800 seconds)
+  try {
+    await redisClient.set(cacheKey, JSON.stringify(formattedContexts), 'EX', 604800);
+  } catch (err) {
+    console.warn("[WARN] Failed to set Redis cache:", err.message);
+  }
+
+  return formattedContexts;
 };
 
 const generateDiagnosis = traceable(async (abnormalResults, symptoms, contexts, availableSpecialties) => {

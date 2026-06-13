@@ -82,12 +82,15 @@ export const buildMedicalIndex = async () => {
         console.log("[INFO] Enriching metadata...");
         const enrichedDocs = rawDocs.map(doc => {
             const sourceName = path.basename(doc.metadata.source, '.pdf');
+            const classification = categorizeDocument(sourceName);
             return new Document({
                 pageContent: doc.pageContent,
                 metadata: {
                     source_file: sourceName,
-                    category: categorizeDocument(sourceName),
-                    ministry: "Ministry of Health & Family Welfare, India",
+                    category: classification.category,
+                    domain: classification.domain,
+                    condition: classification.condition,
+                    ministry: "ICMR/MoHFW",
                     doc_type: "Standard Treatment Guidelines",
                 },
             });
@@ -129,12 +132,20 @@ export const buildMedicalIndex = async () => {
 
 function categorizeDocument(filename) {
     const lowerName = filename.toLowerCase();
-    if (lowerName.includes("diabet")) return "Diabetes";
-    if (lowerName.includes("hypertension")) return "Cardiovascular";
-    if (lowerName.includes("anaemia") || lowerName.includes("anemia")) return "Hematology";
-    if (lowerName.includes("thyroid")) return "Endocrinology";
-    if (lowerName.includes("dengue") || lowerName.includes("malaria")) return "Infectious Disease";
-    return "General Medicine";
+    
+    // Expanded ICMR STW categorization logic for Phase 2 Routing
+    if (lowerName.includes("hypertension") || lowerName.includes("heart failure") || lowerName.includes("myocardial") || lowerName.includes("cardio")) return { category: "Cardiovascular", domain: "Cardiology", condition: filename };
+    if (lowerName.includes("diabet") || lowerName.includes("hypothyroid") || lowerName.includes("endo")) return { category: "Endocrinology", domain: "Endocrinology", condition: filename };
+    if (lowerName.includes("kidney") || lowerName.includes("aki") || lowerName.includes("ckd") || lowerName.includes("nephro")) return { category: "Nephrology", domain: "Nephrology", condition: filename };
+    if (lowerName.includes("liver") || lowerName.includes("jaundice") || lowerName.includes("gastro")) return { category: "Gastroenterology", domain: "Gastroenterology", condition: filename };
+    if (lowerName.includes("skin") || lowerName.includes("derma") || lowerName.includes("bacterial")) return { category: "Dermatology", domain: "Dermatology", condition: filename };
+    if (lowerName.includes("tb") || lowerName.includes("tuberculosis") || lowerName.includes("ntep")) return { category: "Infectious Disease", domain: "Pulmonology", condition: filename };
+    
+    // Existing Fallbacks
+    if (lowerName.includes("anaemia") || lowerName.includes("anemia") || lowerName.includes("hema") || lowerName.includes("iron")) return { category: "Hematology", domain: "Hematology", condition: filename };
+    if (lowerName.includes("dengue") || lowerName.includes("malaria")) return { category: "Infectious Disease", domain: "Infectious Disease", condition: filename };
+    
+    return { category: "General Medicine", domain: "General Medicine", condition: filename };
 }
 
 export const queryIndex = async (query, k = 3) => {

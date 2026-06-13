@@ -1,6 +1,7 @@
 import express from 'express';
 import { getProfile, loginUser, registerUser, updateProfile, bookAppointment, listAppointment, cancelAppointment, paymentRazorpay, verifyRazorpay, getAppointmentStatus } from '../controllers/userController.js';
 import { requestVerification } from '../controllers/authorizeController.js'; 
+import { analyzeBloodReport } from '../controllers/aiController.js';
 import { verifyToken, authorizeRoles } from '../middlewares/auth.middleware.js';
 import upload from '../middlewares/multer.js';
 
@@ -17,5 +18,8 @@ userRouter.post('/payment-razorpay', verifyToken, authorizeRoles('patient'), pay
 userRouter.post('/verifyrazorpay', verifyToken, authorizeRoles('patient'), verifyRazorpay);
 userRouter.post('/authorize-doc', verifyToken, authorizeRoles('patient'), requestVerification);
 userRouter.post('/get-status', verifyToken, authorizeRoles('patient'), getAppointmentStatus);
+
+// AI Analysis Endpoint
+userRouter.post('/analyze-report', verifyToken, authorizeRoles('patient'), analyzeBloodReport);
 
 export default userRouter;

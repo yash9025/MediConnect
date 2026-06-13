@@ -296,6 +296,14 @@ const ChatTrigger = React.memo(({ isOpen, onClick }) => (
           {isOpen ? "Close" : "Analyze Report"}
         </span>
       </div>
+      {/* V1 Pipeline Badge */}
+      <span className="absolute -top-3 -left-2 flex items-center gap-1.5 bg-white text-emerald-700 text-[9px] font-extrabold px-2 py-0.5 rounded-full shadow-md border border-emerald-200 tracking-wide">
+        <span className="relative flex h-1.5 w-1.5">
+          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-500 opacity-75"></span>
+          <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-600"></span>
+        </span>
+        V1 · RAG Pipeline
+      </span>
     </button>
   </div>
 ));
@@ -320,7 +328,10 @@ const ChatHeader = React.memo(({ onReset }) => (
       <div>
         <h3 className="font-bold text-lg">LabLens Assistant</h3>
         <p className="text-xs text-slate-400 flex items-center gap-1.5">
-          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+          <span className="relative flex h-1.5 w-1.5">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+            <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500"></span>
+          </span>
           Online & Ready
         </p>
       </div>
