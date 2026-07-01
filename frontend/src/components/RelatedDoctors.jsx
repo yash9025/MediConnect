@@ -20,14 +20,14 @@ const RelatedDoctors = ({ speciality, docId }) => {
                 Related Doctors
             </h1>
 
-            <div className="grid grid-cols-auto sm:grid-cols-3 lg:grid-cols-5 gap-6">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 sm:gap-6">
                 {relDoc.slice(0, 5).map((item, index) => (
-                    <div onClick={() => { navigate(`/appointment/${item._id}`); scrollTo(0, 0); }} key={index} className="bg-white rounded-2xl shadow-lg overflow-hidden transform transition-all duration-300 hover:scale-105 hover:shadow-xl max-w-xs mx-auto cursor-pointer">
-                        <div className="w-full h-48 bg-gray-100 flex justify-center items-center transition-all duration-300 ease-in-out transform hover:bg-gray-100">
+                    <div onClick={() => { navigate(`/appointment/${item._id}`); scrollTo(0, 0); }} key={index} className="bg-white rounded-2xl shadow-lg overflow-hidden transform transition-all duration-300 hover:scale-105 hover:shadow-xl w-full sm:w-[180px] md:w-[220px] lg:w-[250px] mx-auto cursor-pointer">
+                        <div className="w-full h-40 sm:h-44 md:h-48 bg-gray-100 flex justify-center items-center overflow-hidden rounded-t-2xl">
                             <img
                                 src={item.image}
                                 alt="Doctor"
-                                className="w-full h-full object-cover object-center rounded-t-2xl transition-transform duration-300 ease-in-out transform hover:scale-110"
+                                className="w-full h-full object-cover object-top transition-transform duration-300 ease-in-out transform hover:scale-110"
                             />
                         </div>
                         <div className="p-4 text-center">

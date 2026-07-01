@@ -5,7 +5,7 @@ import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import { MedicalChatBot } from "../features/rag";
 import LiveQueue from "../components/LiveQueue";
-
+import QueueChat from "../components/QueueChat";
 const MyAppointments = () => {
   const { currencySymbol, backendUrl, token, getDoctorData } =
     useContext(AppContext);
@@ -297,10 +297,16 @@ const MyAppointments = () => {
                 !item.isCompleted &&
                 item.status !== "Absent" &&
                 item.status !== "Skipped" && (
-                  <div className="w-full lg:w-96 flex-shrink-0">
+                  <div className="w-full lg:w-96 flex-shrink-0 flex flex-col gap-2">
                     <LiveQueue
                       docId={item.docId}
                       mySlotTime={item.slotTime}
+                    />
+                    <QueueChat
+                      docId={item.docId}
+                      appointmentId={item._id}
+                      userId={item.userId}
+                      tokenNumber={item.tokenNumber}
                     />
                   </div>
                 )}

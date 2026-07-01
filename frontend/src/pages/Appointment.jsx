@@ -45,8 +45,20 @@ const Appointment = () => {
         endTime.setHours(21, 0, 0, 0);
 
         if (i === 0) {
-          currentDate.setHours(Math.max(today.getHours(), 9));
-          currentDate.setMinutes(today.getMinutes() > 30 ? 30 : 0);
+          if (today.getHours() >= 9) {
+            currentDate.setHours(today.getHours());
+            let currentMinutes = today.getMinutes();
+            if (currentMinutes > 30) {
+              currentDate.setHours(currentDate.getHours() + 1);
+              currentDate.setMinutes(0);
+            } else if (currentMinutes > 0) {
+              currentDate.setMinutes(30);
+            } else {
+              currentDate.setMinutes(0);
+            }
+          } else {
+            currentDate.setHours(9, 0, 0, 0);
+          }
         } else {
           currentDate.setHours(9, 0, 0, 0);
         }

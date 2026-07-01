@@ -36,16 +36,7 @@ const Doctors = () => {
   };
 
   const handleReadMoreClick = (doctor) => {
-    const isOpening = selectedDoctor?._id !== doctor._id;
-    setSelectedDoctor(isOpening ? doctor : null);
-
-    if (isOpening) {
-      // Scroll to specific card after expansion
-      setTimeout(() => {
-        const node = cardRefs.current.get(doctor._id);
-        node?.scrollIntoView({ behavior: "smooth", block: "start" });
-      }, 100);
-    }
+    setSelectedDoctor(doctor);
   };
 
   return (
@@ -152,30 +143,8 @@ const Doctors = () => {
                       className="readmore-btn bg-gray-200 text-gray-700 px-6 py-2 rounded-full text-sm hover:bg-gray-300 transition-all duration-200 cursor-pointer"
                       onClick={() => handleReadMoreClick(doctor)}
                     >
-                      {isSelected ? "Read Less" : "Read More"}
+                      Read More
                     </button>
-                  </div>
-
-                  {/* Collapsible Details Section */}
-                  <div
-                    className={`overflow-hidden transition-all duration-500 ease-in-out ${
-                      isSelected ? "max-h-screen" : "max-h-0"
-                    }`}
-                  >
-                    <div className="bg-gray-50 p-4 rounded-lg mt-4">
-                      <h4 className="text-lg font-semibold text-gray-800 mb-2">
-                        About {doctor.name}
-                      </h4>
-                      <p className="text-sm text-gray-600 mb-4">
-                        {doctor.about}
-                      </p>
-                      <p className="text-sm text-gray-600 mb-2">
-                        Fees: ${doctor.fees}
-                      </p>
-                      <p className="text-sm text-gray-600">
-                        Location: {doctor.address.line1}, {doctor.address.line2}
-                      </p>
-                    </div>
                   </div>
                 </div>
               );
@@ -183,6 +152,71 @@ const Doctors = () => {
           )}
         </div>
       </div>
+
+      {/* Doctor Details Modal */}
+      {selectedDoctor && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={() => setSelectedDoctor(null)}>
+          <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-md max-h-[90vh] overflow-y-auto relative animate-[fadeIn_0.2s_ease-out]" onClick={(e) => e.stopPropagation()}>
+            <button 
+              onClick={() => setSelectedDoctor(null)}
+              className="absolute top-4 right-4 text-gray-400 hover:text-gray-700 cursor-pointer p-1 rounded-full hover:bg-gray-100 transition"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+            </button>
+            <div className="flex items-center gap-4 mb-4 mt-2">
+              <img src={selectedDoctor.image} alt={selectedDoctor.name} className="w-20 h-20 rounded-full object-cover shadow-sm bg-gray-50 border-2 border-blue-50" />
+              <div>
+                <h3 className="text-xl font-bold text-gray-800">{selectedDoctor.name}</h3>
+                <p className="text-blue-600 font-medium text-sm mt-0.5">{selectedDoctor.speciality}</p>
+                <p className="text-xs text-gray-500 mt-1 font-semibold bg-gray-100 inline-block px-2 py-0.5 rounded-full">{selectedDoctor.experience}</p>
+              </div>
+            </div>
+            
+            <div className="bg-gray-50 p-5 rounded-xl mt-6 border border-gray-100">
+              <h4 className="text-sm font-bold text-gray-800 mb-3 flex items-center gap-2">
+                About Doctor
+                <svg className="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+              </h4>
+              <p className="text-sm text-gray-600 mb-4 leading-relaxed">
+                {selectedDoctor.about}
+              </p>
+              <div className="grid grid-cols-2 gap-4 text-sm mt-4 pt-4 border-t border-gray-200/60">
+                <div>
+                  <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Fee</p>
+                  <p className="font-semibold text-gray-800">${selectedDoctor.fees}</p>
+                </div>
+                <div>
+                  <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Location</p>
+                  <p className="font-semibold text-gray-800 truncate" title={`${selectedDoctor.address.line1}, ${selectedDoctor.address.line2}`}>
+                    {selectedDoctor.address.line1}
+                  </p>
+                </div>
+              </div>
+            </div>
+            
+            <div className="mt-6 flex justify-end gap-3">
+              <button 
+                onClick={() => setSelectedDoctor(null)}
+                className="px-5 py-2.5 rounded-full text-sm font-semibold text-gray-600 hover:bg-gray-100 transition cursor-pointer"
+              >
+                Close
+              </button>
+              <button 
+                disabled={!selectedDoctor.available}
+                onClick={() => {
+                  if (selectedDoctor.available) {
+                    navigate(`/appointment/${selectedDoctor._id}`);
+                  }
+                }}
+                className={`px-6 py-2.5 rounded-full text-sm font-bold transition shadow-sm ${selectedDoctor.available ? 'bg-blue-600 text-white hover:bg-blue-700 cursor-pointer shadow-blue-500/20 hover:shadow-md' : 'bg-red-500 text-white cursor-not-allowed opacity-90'}`}
+              >
+                {selectedDoctor.available ? 'Book Appointment' : 'Not Available'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <MedicalChatBot/>
     </div>
   );

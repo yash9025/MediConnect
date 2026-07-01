@@ -251,6 +251,15 @@ const nextPatient = async (req, res) => {
         avgTime: avgConsultationTime,
         opdActive: false  // Notify users OPD waiting mode is off
       });
+      
+      // Cross-emit to admin room
+      io.to("admin_global_queue_room").emit("global-queue-update", {
+        docId,
+        currentSlotTime: nextAppt.slotTime,
+        lastUpdate: now,
+        avgTime: avgConsultationTime,
+        opdActive: false
+      });
     }
 
     res.json({ 
@@ -321,6 +330,11 @@ const markAbsent = async (req, res) => {
           currentSlotTime: nextSlotTime,
           lastUpdate: new Date(),
         });
+        io.to("admin_global_queue_room").emit("global-queue-update", {
+          docId,
+          currentSlotTime: nextSlotTime,
+          lastUpdate: new Date(),
+        });
       }
     }
 
@@ -337,7 +351,10 @@ const resetQueue = async (req, res) => {
     await doctorModel.findByIdAndUpdate(docId, { currentSlotTime: "" });
 
     const io = req.app.get("io");
-    if (io) io.to(`doctor_${docId}`).emit("queue-update", { currentSlotTime: "" });
+    if (io) {
+      io.to(`doctor_${docId}`).emit("queue-update", { currentSlotTime: "" });
+      io.to("admin_global_queue_room").emit("global-queue-update", { docId, currentSlotTime: "" });
+    }
 
     res.json({ success: true, message: "Queue Reset" });
   } catch (error) {
@@ -407,6 +424,11 @@ const startOPD = async (req, res) => {
     const io = req.app.get("io");
     if (io) {
       io.to("doctor_" + docId).emit("opd-started", {
+        opdActive: true,
+        opdStartTime: new Date()
+      });
+      io.to("admin_global_queue_room").emit("global-queue-update", {
+        docId,
         opdActive: true,
         opdStartTime: new Date()
       });

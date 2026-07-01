@@ -113,11 +113,27 @@ const Login = () => {
 
   useEffect(() => {
     const storedToken = localStorage.getItem('token') || '';
-    if (!token || !storedToken) return;
+    console.log("Login Check - token:", token, "storedToken:", storedToken);
 
-    const role = decodeJwtPayload(token)?.role;
+    if (!token || !storedToken || token === 'undefined' || token === 'null') {
+      console.log("Login Check - Empty or invalid string token, staying on page.");
+      return;
+    }
+
+    const decoded = decodeJwtPayload(token);
+    const role = decoded?.role;
+    console.log("Login Check - Decoded role:", role);
+    
+    if (!role) {
+       console.log("Login Check - No role found. Clearing token.");
+       localStorage.removeItem('token');
+       setToken('');
+       return;
+    }
+    
+    console.log("Login Check - Navigating to:", roleHomeMap[role] || '/');
     navigate(roleHomeMap[role] || '/', { replace: true });
-  }, [token, navigate]);
+  }, [token, navigate, setToken]);
 
   return (
     <form className="max-w-md mx-auto bg-white p-6 rounded-2xl shadow-lg mt-8 mb-8" onSubmit={onSubmitHandler}>

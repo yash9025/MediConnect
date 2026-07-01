@@ -1,17 +1,23 @@
 import  { useContext, useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { DoctorContext } from '../../context/DoctorContext';
 import { AppContext } from '../../context/AppContext';
 import { toast } from 'react-toastify';
 import axios from 'axios';
-
+import { io } from 'socket.io-client';
+import { useRef } from 'react';
 const DoctorAppointment = () => {
-  const { dToken, appointments, getAppointments, completeAppointment, cancelAppointment, backendUrl } = useContext(DoctorContext);
+  const { dToken, appointments, getAppointments, completeAppointment, cancelAppointment, backendUrl, profileData, getProfileData } = useContext(DoctorContext);
   const { calculateAge, slotDateFormat } = useContext(AppContext);
   const [filter, setFilter] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [isCalling, setIsCalling] = useState(false);
   const [opdActive, setOpdActive] = useState(false);
   const [isStartingOpd, setIsStartingOpd] = useState(false);
+  const [messages, setMessages] = useState([]);
+  const [reportedUsers, setReportedUsers] = useState(new Set());
+  const socketRef = useRef(null);
+  const messagesEndRef = useRef(null);
   
   // Date filter state - defaults to today
   const getTodayStr = () => {
@@ -23,11 +29,71 @@ const DoctorAppointment = () => {
   };
   const [selectedDate, setSelectedDate] = useState(getTodayStr());
 
+  const [isCalendarOpen, setIsCalendarOpen] = useState(false);
+  const [dropdownPos, setDropdownPos] = useState({ top: 0, left: 0, width: 280 });
+  const calendarRef = useRef(null);
+  const calendarBtnRef = useRef(null);
+
+  const openCalendar = () => {
+    if (calendarBtnRef.current) {
+      const rect = calendarBtnRef.current.getBoundingClientRect();
+      setDropdownPos({
+        top: rect.bottom + window.scrollY + 8,
+        left: rect.left + window.scrollX,
+        width: Math.max(rect.width, 280),
+      });
+    }
+    setIsCalendarOpen(prev => !prev);
+  };
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (calendarRef.current && !calendarRef.current.contains(event.target)) {
+        setIsCalendarOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
   useEffect(() => {
     if (dToken) {
       getAppointments();
+      getProfileData();
     }
-  }, [dToken, getAppointments]);
+  }, [dToken, getAppointments, getProfileData]);
+
+  useEffect(() => {
+    if (messagesEndRef.current && messages.length > 0) {
+       messagesEndRef.current.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+  }, [messages]);
+
+  useEffect(() => {
+      if (dToken && backendUrl && profileData?._id) {
+          socketRef.current = io(backendUrl);
+          const socket = socketRef.current;
+          socket.emit('join-doctor-room', profileData._id);
+
+          socket.on('receive-queue-message', (data) => {
+              setMessages((prev) => [...prev, data]);
+          });
+
+          return () => {
+              socket.off('receive-queue-message');
+              socket.disconnect();
+          };
+      }
+  }, [dToken, backendUrl, profileData?._id]);
+
+  const handleReportSpam = (userId) => {
+      if (!socketRef.current || !profileData?._id) return;
+      socketRef.current.emit('report-spam', { docId: profileData._id, userId });
+      setReportedUsers((prev) => new Set(prev).add(userId));
+      toast.success("User reported. Their messages will be hidden.");
+  };
+
+  const visibleMessages = messages.filter(msg => !reportedUsers.has(msg.userId));
 
   // Fetch OPD status on load
   useEffect(() => {
@@ -112,6 +178,15 @@ const DoctorAppointment = () => {
     return dateString === `${day}_${month}_${year}`;
   };
 
+  // Returns true only if the appointment date is TODAY or PAST — actions are locked for future dates
+  const isDateReached = (dateString) => {
+    const [day, month, year] = dateString.split('_').map(Number);
+    const slotDate = new Date(year, month - 1, day);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return slotDate <= today;
+  };
+
   // Get unique dates from appointments for the dropdown
   const availableDates = [...new Set(appointments.map(a => a.slotDate))].sort((a, b) => {
     const [dayA, monthA, yearA] = a.split('_').map(Number);
@@ -182,13 +257,15 @@ const DoctorAppointment = () => {
   };
 
   return (
-    <div className="ml-16 md:ml-64 pt-20 min-h-screen bg-slate-50 font-sans">
+    <div className="ml-16 md:ml-52 pt-20 min-h-screen bg-slate-50 font-sans overflow-x-hidden w-full">
       
       {/* --- HERO HEADER --- */}
-      <div className="relative bg-gradient-to-r from-blue-500 via-blue-600 to-green-600 shadow-2xl pb-32 md:pb-40 pt-12 px-6 md:px-12 overflow-hidden">
+      <div className="relative z-10 bg-gradient-to-r from-blue-500 via-blue-600 to-green-600 shadow-2xl pb-28 md:pb-36 pt-12 px-6 md:px-12">
         {/* Background Patterns */}
-        <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-white/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3"></div>
-        <div className="absolute bottom-0 left-0 w-[300px] h-[300px] bg-blue-400/10 rounded-full blur-2xl translate-y-1/3 -translate-x-1/4"></div>
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-white/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3"></div>
+          <div className="absolute bottom-0 left-0 w-[300px] h-[300px] bg-blue-400/10 rounded-full blur-2xl translate-y-1/3 -translate-x-1/4"></div>
+        </div>
 
         <div className="relative z-10 flex flex-col lg:flex-row lg:items-end justify-between gap-8">
           <div className="flex-1">
@@ -208,28 +285,22 @@ const DoctorAppointment = () => {
              {/* Date Picker Dropdown */}
              <div className="relative group">
                 <div className="absolute inset-0 bg-white/20 rounded-2xl blur-md group-hover:bg-white/30 transition-all"></div>
-                <div className="relative flex items-center bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl p-1 shadow-lg group-hover:border-white/40 transition-all">
+                <div 
+                  ref={calendarBtnRef}
+                  className="relative flex items-center bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl p-1 shadow-lg group-hover:border-white/40 transition-all cursor-pointer min-w-[200px]"
+                  onClick={openCalendar}
+                >
                    <div className="pl-4 text-blue-200">
                       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
                    </div>
-                   <select
-                      value={selectedDate}
-                      onChange={(e) => setSelectedDate(e.target.value)}
-                      className="bg-transparent border-none text-white focus:ring-0 text-sm py-3 px-3 font-medium cursor-pointer appearance-none pr-10 min-w-[180px]"
-                      style={{ backgroundImage: 'none' }}
-                   >
-                      <option value="all" className="text-slate-800">All Dates</option>
-                      {availableDates.map(date => (
-                         <option key={date} value={date} className="text-slate-800">
-                            {formatDateForDropdown(date)}
-                         </option>
-                      ))}
-                   </select>
-                   <div className="pr-3 text-blue-200 pointer-events-none">
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
+                   <div className="flex-1 text-white text-sm py-3 px-3 font-medium truncate select-none">
+                      {formatDateForDropdown(selectedDate)}
                    </div>
-                </div>
-             </div>
+                   <div className="pr-3 text-blue-200">
+                      <svg className={`w-4 h-4 transition-transform duration-200 ${isCalendarOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
+                   </div>
+                 </div>
+              </div>
 
              {/* Glass Search Bar */}
              <div className="relative group lg:w-[300px]">
@@ -252,7 +323,56 @@ const DoctorAppointment = () => {
       </div>
 
       {/* --- STATS GRID --- */}
-      <div className="px-6 md:px-12 -mt-24 relative z-20">
+      {/* Calendar Portal Dropdown - renders at body level to escape ALL z-index stacking */}
+      {createPortal(
+        <div
+          ref={calendarRef}
+          style={{
+            position: 'absolute',
+            top: dropdownPos.top,
+            left: dropdownPos.left,
+            width: dropdownPos.width,
+            zIndex: 99999,
+          }}
+          className={`bg-white rounded-2xl shadow-2xl border border-slate-100 overflow-hidden transition-all duration-200 origin-top-left ${
+            isCalendarOpen ? 'opacity-100 scale-100 visible' : 'opacity-0 scale-95 invisible pointer-events-none'
+          }`}
+        >
+          <div className="bg-slate-50 border-b border-slate-100 p-3 flex justify-between items-center">
+            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Select Date</span>
+            <span className="bg-blue-100 text-blue-600 text-[10px] font-bold px-2 py-0.5 rounded-full">{availableDates.length} Days</span>
+          </div>
+          <div className="max-h-[300px] overflow-y-auto p-2 space-y-1">
+            <button
+              onClick={() => { setSelectedDate('all'); setIsCalendarOpen(false); }}
+              className={`w-full text-left px-4 py-3 text-sm font-medium rounded-xl transition-all flex items-center justify-between ${selectedDate === 'all' ? 'bg-blue-50 text-blue-700' : 'text-slate-600 hover:bg-slate-50'}`}
+            >
+              All Upcoming Dates
+              {selectedDate === 'all' && <div className="w-2 h-2 rounded-full bg-blue-500"></div>}
+            </button>
+            {availableDates.map(date => {
+              const isSelected = selectedDate === date;
+              const isTodayDate = getTodayStr() === date;
+              return (
+                <button
+                  key={date}
+                  onClick={() => { setSelectedDate(date); setIsCalendarOpen(false); }}
+                  className={`w-full text-left px-4 py-3 text-sm font-medium rounded-xl transition-all flex items-center justify-between ${isSelected ? 'bg-blue-50 text-blue-700' : 'text-slate-600 hover:bg-slate-50'}`}
+                >
+                  <span className="flex items-center gap-2">
+                    {formatDateForDropdown(date).replace(' Today - ', '').replace(' Tomorrow - ', '')}
+                    {isTodayDate && <span className="bg-amber-100 text-amber-700 text-[10px] px-1.5 py-0.5 rounded uppercase font-bold tracking-wider">Today</span>}
+                  </span>
+                  {isSelected && <div className="w-2 h-2 rounded-full bg-blue-500"></div>}
+                </button>
+              );
+            })}
+          </div>
+        </div>,
+        document.body
+      )}
+
+      <div className="px-6 md:px-12 -mt-20 relative z-20">
          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
             {[
               { key: 'all', label: 'Total', value: stats.total, color: 'blue', icon: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path> },
@@ -279,8 +399,9 @@ const DoctorAppointment = () => {
          </div>
       </div>
 
-      {/* --- APPOINTMENTS LIST --- */}
-      <div className="px-6 md:px-12 py-10 pb-24 w-full">
+      {/* --- CONTENT AREA (List + Chat Panel) --- */}
+      <div className="px-6 md:px-12 py-10 pb-24 w-full flex flex-col xl:flex-row gap-8">
+         <div className="flex-1 min-w-0">
          
          <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
             
@@ -399,7 +520,7 @@ const DoctorAppointment = () => {
                            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
                               
                               {/* Patient Details */}
-                              <div className="flex items-center gap-5 lg:w-[30%]">
+                              <div className="flex items-center gap-3 min-w-0 w-[180px] flex-shrink-0">
                                  <div className="relative">
                                     <img src={item.userData.image} alt={item.userData.name} className="w-16 h-16 rounded-2xl object-cover shadow-sm bg-slate-100 ring-4 ring-slate-50"/>
                                     {isToday(item.slotDate) && !item.cancelled && !item.isCompleted && item.status !== "Skipped" && item.status !== "Absent" && (
@@ -419,7 +540,7 @@ const DoctorAppointment = () => {
                               </div>
 
                               {/* Meta Info Grid */}
-                              <div className="flex flex-wrap items-center gap-x-10 gap-y-4 lg:w-[40%]">
+                              <div className="flex items-center gap-x-4 gap-y-2 flex-1 flex-wrap min-w-0">
                                  <div>
                                     <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Date</p>
                                     <p className="text-sm font-bold text-slate-700">{slotDateFormat(item.slotDate)}</p>
@@ -438,7 +559,7 @@ const DoctorAppointment = () => {
                               </div>
 
                               {/* ACTIONS */}
-                              <div className="lg:w-[30%] flex justify-end">
+                              <div className="flex-shrink-0 flex items-center">
                                  {item.cancelled ? (
                                     <div className="px-4 py-2 bg-rose-50 text-rose-600 rounded-xl font-bold text-sm border border-rose-100 flex items-center gap-2">
                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
@@ -455,36 +576,48 @@ const DoctorAppointment = () => {
                                        Absent - Book New Appointment
                                     </div>
                                  ) : (
-                                    <div className="flex items-center gap-3 w-full lg:w-auto">
-                                       
+                                    <div className="flex items-center gap-2">
+                                        
+                                        {/* Lock badge shown for future appointments */}
+                                        {!isDateReached(item.slotDate) && (
+                                          <div className="flex items-center gap-1.5 px-3 py-2 bg-slate-100 border border-slate-200 rounded-xl text-slate-500 text-xs font-bold" title="Actions locked until appointment date">
+                                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
+                                            Locked until {slotDateFormat(item.slotDate)}
+                                          </div>
+                                        )}
+
+                                        {isDateReached(item.slotDate) && (
+                                          <>
                                        <button 
                                           onClick={() => markAbsent(item._id)}
                                           disabled={!isToday(item.slotDate)}
-                                          className={`cursor-pointer group/btn flex-1 lg:flex-none h-12 w-12 rounded-xl border flex items-center justify-center transition-all duration-200 relative overflow-hidden ${!isToday(item.slotDate) ? 'bg-slate-50 border-slate-100 text-slate-300 cursor-not-allowed' : 'bg-amber-50 border-amber-100 text-amber-500 hover:bg-amber-500 hover:text-white hover:shadow-lg hover:shadow-amber-200'}`}
-                                          title="Mark Absent"
+                                          className={`cursor-pointer h-10 w-10 rounded-xl border flex items-center justify-center transition-all duration-200 ${!isToday(item.slotDate) ? 'bg-slate-50 border-slate-100 text-slate-300 cursor-not-allowed' : 'bg-amber-50 border-amber-100 text-amber-500 hover:bg-amber-500 hover:text-white hover:shadow-md hover:shadow-amber-200'}`}
+                                          title={!isToday(item.slotDate) ? 'Can only mark absent on appointment day' : 'Mark Absent'}
                                        >
-                                          <svg className="w-6 h-6 relative z-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"></path>
                                           </svg>
                                        </button>
 
                                        <button 
                                           onClick={() => cancelAppointment(item._id)}
-                                          className="cursor-pointer group/btn flex-1 lg:flex-none h-12 w-12 rounded-xl bg-rose-50 border border-rose-100 text-rose-500 flex items-center justify-center transition-all duration-200 hover:bg-rose-500 hover:text-white hover:shadow-lg hover:shadow-rose-200"
+                                          className="cursor-pointer h-10 w-10 rounded-xl bg-rose-50 border border-rose-100 text-rose-500 flex items-center justify-center transition-all duration-200 hover:bg-rose-500 hover:text-white hover:shadow-md hover:shadow-rose-200"
                                           title="Cancel Appointment"
                                        >
-                                          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
                                           </svg>
                                        </button>
 
                                        <button 
                                           onClick={() => completeAppointment(item._id)}
-                                          className="cursor-pointer flex-1 lg:flex-none h-12 px-6 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 text-white font-bold text-sm shadow-lg shadow-emerald-200 flex items-center justify-center gap-2 transition-all duration-200 hover:scale-105 hover:shadow-xl hover:shadow-emerald-300"
+                                          className="cursor-pointer h-10 px-4 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 text-white font-bold text-sm shadow-md shadow-emerald-200 flex items-center gap-1.5 transition-all duration-200 hover:scale-105"
                                        >
-                                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7"></path></svg>
-                                          <span className="hidden lg:inline">Done</span>
+                                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7"></path></svg>
+                                          <span>Done</span>
                                        </button>
+                                          </>
+                                        )}
                                     </div>
                                  )}
                               </div>
@@ -507,7 +640,63 @@ const DoctorAppointment = () => {
                      <button onClick={() => {setSearchTerm(''); setFilter('all'); setSelectedDate(getTodayStr());}} className="cursor-pointer px-6 py-2 bg-blue-100 text-blue-600 rounded-full font-bold text-sm hover:bg-blue-200 transition">View Today&apos;s Appointments</button>
                   )}
                </div>
-            )}
+             )}
+          </div>
+         </div>
+
+         {/* --- LIVE MESSAGES PANEL --- */}
+         <div className="w-full xl:w-96 flex-shrink-0 flex flex-col bg-white rounded-3xl border border-slate-100 shadow-lg overflow-hidden sticky top-24" style={{ height: 'calc(100vh - 120px)' }}>
+            <div className="bg-gradient-to-r from-blue-600 to-indigo-600 p-5 flex items-center justify-between shadow-md z-10">
+               <div className="flex items-center gap-3">
+                  <div className="bg-white/20 p-2 rounded-xl backdrop-blur-sm">
+                     <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path></svg>
+                  </div>
+                  <div>
+                     <h2 className="text-white font-bold text-lg leading-tight">Live Messages</h2>
+                     <p className="text-blue-100 text-xs font-medium">Patient Updates & Emergencies</p>
+                  </div>
+               </div>
+               <div className="flex items-center gap-1.5 bg-white/10 px-2.5 py-1 rounded-lg">
+                  <span className="relative flex h-2 w-2">
+                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                     <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-400"></span>
+                  </span>
+                  <span className="text-white text-[10px] font-bold uppercase tracking-wider">Live</span>
+               </div>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-5 bg-slate-50 flex flex-col gap-4">
+               {visibleMessages.length === 0 ? (
+                  <div className="h-full flex flex-col items-center justify-center text-slate-400 text-sm italic">
+                     <svg className="w-12 h-12 text-slate-200 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path></svg>
+                     No incoming messages yet
+                  </div>
+               ) : (
+                  visibleMessages.map((msg, idx) => (
+                     <div key={idx} className="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 group transition-all hover:shadow-md">
+                        <div className="flex items-start justify-between mb-2 gap-2">
+                           <div className="flex items-center gap-2">
+                              {msg.tokenNumber ? (
+                                 <span className="bg-blue-100 text-blue-700 text-xs font-bold px-2 py-0.5 rounded-lg border border-blue-200">
+                                    Token #{msg.tokenNumber}
+                                 </span>
+                              ) : null}
+                              <span className="font-bold text-slate-700 text-sm">{msg.senderName}</span>
+                           </div>
+                           <button 
+                              onClick={() => handleReportSpam(msg.userId)}
+                              title="Report Spam and Block User"
+                              className="opacity-0 group-hover:opacity-100 transition-opacity text-rose-400 hover:text-rose-600 bg-rose-50 hover:bg-rose-100 p-1.5 rounded-lg border border-rose-100 cursor-pointer"
+                           >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 21v-4m0 0V5a2 2 0 012-2h6.5l1 1H21l-3 6 3 6h-8.5l-1-1H5a2 2 0 00-2 2zm9-13.5V9"></path></svg>
+                           </button>
+                        </div>
+                        <p className="text-slate-600 text-sm leading-relaxed">{msg.message}</p>
+                     </div>
+                  ))
+               )}
+               <div ref={messagesEndRef} />
+            </div>
          </div>
       </div>
     </div>

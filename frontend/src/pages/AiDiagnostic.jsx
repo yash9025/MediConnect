@@ -1,4 +1,5 @@
 import React, { useState, useCallback, useContext, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { toast } from "react-toastify";
 import { AppContext } from "../context/AppContext";
@@ -128,6 +129,7 @@ const V1ResultPanel = ({ data }) => {
 
 const AiDiagnostic = () => {
   const { token, backendUrl } = useContext(AppContext);
+  const navigate = useNavigate();
 
   // Input
   const [inputMode, setInputMode] = useState("text");
@@ -297,7 +299,22 @@ const AiDiagnostic = () => {
             Upload your blood report or paste the text. Powered by ICMR & MoHFW clinical guidelines.
           </p>
         </div>
-
+        {!token ? (
+          <div className="bg-white rounded-lg shadow-lg p-12 mb-6 border border-gray-100 text-center">
+            <div className="text-6xl mb-4">🔒</div>
+            <h2 className="text-2xl font-bold text-gray-800 mb-3">Login Required</h2>
+            <p className="text-gray-600 mb-8 max-w-md mx-auto">
+              You must be logged in to access the AI Diagnostics feature. Please login or create an account to get your reports analysed by our advanced AI.
+            </p>
+            <button 
+              onClick={() => navigate('/login')}
+              className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-8 rounded-full transition-all shadow-md transform hover:scale-105"
+            >
+              Login to Access
+            </button>
+          </div>
+        ) : (
+          <>
         {/* ── Input Card ── */}
         <div className="bg-white rounded-lg shadow-lg p-6 mb-6 border border-gray-100">
 
@@ -461,6 +478,9 @@ const AiDiagnostic = () => {
 
         {/* ── V1 Result ── */}
         {v1Result && <V1ResultPanel data={v1Result} />}
+
+          </>
+        )}
 
       </div>
       <MedicalChatBot />

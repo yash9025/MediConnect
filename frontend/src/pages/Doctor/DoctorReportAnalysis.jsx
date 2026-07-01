@@ -103,7 +103,7 @@ const DoctorReportAnalysis = () => {
         // Changed "md:ml-64" to "ml-16 md:ml-64".
         // "ml-16" pushes content 4rem (64px) to the right on mobile to clear the icon bar.
         // "md:ml-64" pushes it 16rem (256px) on desktop to clear the full sidebar.
-        <div className="ml-16 md:ml-64 pt-20 sm:pt-24 px-4 sm:px-8 pb-10 min-h-screen bg-gray-50 font-sans">
+        <div className="ml-16 md:ml-52 pt-20 sm:pt-24 px-4 sm:px-8 pb-10 min-h-screen bg-gray-50 font-sans overflow-x-hidden">
             
             <header className="flex flex-col sm:flex-row justify-between items-start sm:items-end mb-8 gap-4">
                 <div>

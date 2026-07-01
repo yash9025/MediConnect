@@ -1,16 +1,43 @@
-import  { useContext, useEffect, useState } from 'react';
+import { useContext, useEffect, useState, useRef } from 'react';
 import { AdminContext } from '../../context/AdminContext';
-import { assets } from '../../assets/admin/assets'; 
+import { io } from 'socket.io-client';
 
 const DoctorList = () => {
-  const { doctors, aToken, getAllDoctors, changeAvailability } = useContext(AdminContext);
+  const { doctors, aToken, getAllDoctors, changeAvailability, backendUrl } = useContext(AdminContext);
   const [searchTerm, setSearchTerm] = useState("");
+  const [liveQueues, setLiveQueues] = useState({});
+  const socketRef = useRef(null);
 
   useEffect(() => {
     if (aToken) {
       getAllDoctors();
     }
   }, [aToken]);
+
+  useEffect(() => {
+      if (aToken && backendUrl) {
+          socketRef.current = io(backendUrl);
+          const socket = socketRef.current;
+          
+          socket.emit('join-admin-room');
+
+          socket.on('global-queue-update', (data) => {
+              const { docId, currentSlotTime, opdActive, lastUpdate } = data;
+              setLiveQueues(prev => ({
+                  ...prev,
+                  [docId]: {
+                      currentSlotTime: currentSlotTime !== undefined ? currentSlotTime : prev[docId]?.currentSlotTime,
+                      opdActive: opdActive !== undefined ? opdActive : prev[docId]?.opdActive,
+                      lastUpdate: lastUpdate || prev[docId]?.lastUpdate
+                  }
+              }));
+          });
+
+          return () => {
+              socket.disconnect();
+          };
+      }
+  }, [aToken, backendUrl]);
 
   const filteredDoctors = doctors.filter((doc) =>
     doc.name.toLowerCase().includes(searchTerm.toLowerCase())
@@ -61,6 +88,32 @@ const DoctorList = () => {
                   <p className={`text-sm font-semibold ${item.available ? "text-green-500" : "text-red-500"}`}>
                     {item.available ? "Available" : "Not Available"}
                   </p>
+                </div>
+
+                {/* LIVE QUEUE DISPLAY */}
+                <div className="mt-4 pt-3 border-t border-gray-100 flex flex-col gap-2 min-h-[4rem]">
+                    {liveQueues[item._id]?.opdActive && (
+                        <div className="flex items-center justify-center gap-1.5 bg-red-50 text-red-600 px-2 py-1 rounded text-xs font-bold border border-red-100">
+                            <span className="relative flex h-2 w-2">
+                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                                <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
+                            </span>
+                            EMERGENCY OT
+                        </div>
+                    )}
+                    
+                    {liveQueues[item._id]?.currentSlotTime && (
+                        <div className="flex items-center justify-center gap-2 bg-blue-50 text-blue-700 px-3 py-2 rounded-lg border border-blue-100 shadow-sm">
+                            <span className="text-xs uppercase font-bold tracking-widest text-blue-400">Serving</span>
+                            <span className="font-bold">{liveQueues[item._id].currentSlotTime}</span>
+                        </div>
+                    )}
+                    
+                    {!liveQueues[item._id]?.opdActive && !liveQueues[item._id]?.currentSlotTime && (
+                        <div className="text-xs text-gray-400 font-medium italic py-1 mt-auto text-center">
+                            Queue Inactive
+                        </div>
+                    )}
                 </div>
               </div>
             </div>

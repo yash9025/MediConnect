@@ -1,4 +1,4 @@
-import { createContext, useState } from "react";
+import { createContext, useState, useCallback } from "react";
 import axios from 'axios';
 import {toast} from 'react-toastify';
 
@@ -38,12 +38,12 @@ const DoctorContextProvider = (props) => {
 
     const authHeaders = dToken ? { Authorization: `Bearer ${dToken}` } : {};
 
-    const getAppointments = async () => {
+    const getAppointments = useCallback(async () => {
         if (!dToken) return;
         
         try {
             
-            const {data} = await axios.get(backendUrl + '/api/doctor/appointments' , { headers: authHeaders });
+            const {data} = await axios.get(backendUrl + '/api/doctor/appointments' , { headers: { Authorization: `Bearer ${dToken}` } });
             if(data.success){
                 setAppointments(data.appointments.reverse());
                 // console.log(data.appointments.reverse());
@@ -56,14 +56,14 @@ const DoctorContextProvider = (props) => {
             toast.error(error.message);
             
         }
-    }
+    }, [dToken, backendUrl]);
 
-    const completeAppointment = async (appointmentId) => {
+    const completeAppointment = useCallback(async (appointmentId) => {
         if (!dToken) return;
         
         try {
             
-            const {data} = await axios.post(backendUrl + '/api/doctor/complete-appointment' ,{appointmentId},{ headers: authHeaders });
+            const {data} = await axios.post(backendUrl + '/api/doctor/complete-appointment' ,{appointmentId},{ headers: { Authorization: `Bearer ${dToken}` } });
             if(data.success){
                 toast.success(data.message);
                 getAppointments();
@@ -75,14 +75,14 @@ const DoctorContextProvider = (props) => {
             console.log(error);
             toast.error(error.message);
         }
-    }
+    }, [dToken, backendUrl, getAppointments]);
 
-    const cancelAppointment = async (appointmentId) => {
+    const cancelAppointment = useCallback(async (appointmentId) => {
         if (!dToken) return;
         
         try {
             
-            const {data} = await axios.post(backendUrl + '/api/doctor/cancel-appointment' ,{appointmentId},{ headers: authHeaders });
+            const {data} = await axios.post(backendUrl + '/api/doctor/cancel-appointment' ,{appointmentId},{ headers: { Authorization: `Bearer ${dToken}` } });
             if(data.success){
                 toast.success(data.message);
                 getAppointments();
@@ -95,14 +95,14 @@ const DoctorContextProvider = (props) => {
             console.log(error);
             toast.error(error.message);
         }
-    }
+    }, [dToken, backendUrl, getAppointments]);
 
-    const getDashData = async () => {
+    const getDashData = useCallback(async () => {
         if (!dToken) return;
         
         try {
             
-            const {data} = await axios.get(backendUrl + '/api/doctor/dashboard' , { headers: authHeaders });
+            const {data} = await axios.get(backendUrl + '/api/doctor/dashboard' , { headers: { Authorization: `Bearer ${dToken}` } });
             if(data.success){
                 setDashData(data.dashData);
                 console.log(data.dashData);
@@ -115,23 +115,20 @@ const DoctorContextProvider = (props) => {
             toast.error(error.message);
             
         }
-    }
+    }, [dToken, backendUrl]);
 
-    const getProfileData = async () => {
-                if (!dToken) return;
+    const getProfileData = useCallback(async () => {
+        if (!dToken) return;
         try {
-            
-                    const {data} = await axios.get(backendUrl + '/api/doctor/profile' , { headers: authHeaders });
-          if(data.success){
-            setProfileData(data.profileData);
-            console.log(data.profileData);
-            
-          }
-
+            const {data} = await axios.get(backendUrl + '/api/doctor/profile' , { headers: { Authorization: `Bearer ${dToken}` } });
+            if(data.success){
+              setProfileData(data.profileData);
+              console.log(data.profileData);
+            }
         } catch (error) {
-            
+            console.log(error);
         }
-    }
+    }, [dToken, backendUrl]);
 
 
     const value={

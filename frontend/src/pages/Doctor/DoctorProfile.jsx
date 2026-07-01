@@ -68,7 +68,7 @@ const DoctorProfile = () => {
 
   return (
     profileData && (
-      <div className="min-h-screen bg-[#F8F9FD] ml-16 md:ml-64 transition-all duration-300 pt-28 px-6 sm:px-12">
+      <div className="min-h-screen bg-[#F8F9FD] ml-16 md:ml-52 transition-all duration-300 pt-28 px-6 sm:px-12 overflow-x-hidden">
         <div className="max-w-5xl mx-auto bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden mb-10">
 
           {/* Header Section */}

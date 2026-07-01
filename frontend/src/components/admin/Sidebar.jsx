@@ -16,7 +16,7 @@ const Sidebar = () => {
     }, []);
 
     return (
-        <div className={`h-screen bg-white shadow-lg fixed left-0 top-16 pt-16 transition-all duration-300 ${isMobile ? 'w-16' : 'w-64'} p-3`}>
+        <div className={`h-screen bg-white shadow-lg fixed left-0 top-16 pt-16 transition-all duration-300 ${isMobile ? 'w-16' : 'w-52'} p-3`}>
             {aToken && (
                 <ul className="space-y-4">
                     <NavLink

@@ -6,6 +6,9 @@ import razorpay from "razorpay";
 import userModel from "../models/userModel.js";
 import doctorModel from "../models/doctorModel.js";
 import appointmentModel from "../models/appointmentModel.js";
+import mongoose from "mongoose";
+import { enqueueBooking } from "../workers/bookingQueue.js";
+import { enqueuePaymentVerification } from "../workers/paymentQueue.js";
 
 // Helper to standardise date format DD_MM_YYYY
 const getTodayDateStr = () => {
@@ -145,7 +148,10 @@ const bookAppointment = async (req, res) => {
     // We remove slots_booked from docData spread to avoid saving heavy nested data into appointment doc
     const { slots_booked: _, ...cleanDocData } = docData.toObject();
 
-    const newAppointment = new appointmentModel({
+    const appointmentId = new mongoose.Types.ObjectId();
+
+    const appointmentData = {
+      _id: appointmentId,
       userId,
       docId,
       userData,
@@ -155,9 +161,10 @@ const bookAppointment = async (req, res) => {
       slotDate,
       date: Date.now(),
       tokenNumber: newToken,
-    });
+    };
 
-    await newAppointment.save();
+    // Push to Booking queue instead of saving directly
+    await enqueueBooking({ appointmentData });
 
     // Update doctor slots and notify frontend via Socket.io
     await doctorModel.findByIdAndUpdate(docId, { slots_booked });
@@ -165,7 +172,7 @@ const bookAppointment = async (req, res) => {
     const io = req.app.get("io");
     if (io) io.to("doctor_" + docId).emit("slot-removed", { slotDate, slotTime });
 
-    res.json({ success: true, message: "Appointment Booked", token: newToken });
+    res.json({ success: true, message: "Appointment Booking Initiated", token: newToken, appointmentId });
 
   } catch (error) {
     console.error(error);
@@ -282,14 +289,11 @@ const paymentRazorpay = async (req, res) => {
 const verifyRazorpay = async (req, res) => {
   try {
     const { razorpay_order_id } = req.body;
-    const orderInfo = await razorpayInstance.orders.fetch(razorpay_order_id);
+    
+    // Push to payment queue
+    await enqueuePaymentVerification({ razorpay_order_id });
 
-    if (orderInfo.status === "paid") {
-      await appointmentModel.findByIdAndUpdate(orderInfo.receipt, { payment: true });
-      res.json({ success: true, message: "Payment Successful" });
-    } else {
-      res.json({ success: false, message: "Payment Failed" });
-    }
+    res.json({ success: true, message: "Payment Verification Initiated" });
   } catch (error) {
     console.error(error);
     res.json({ success: false, message: error.message });

@@ -5,6 +5,8 @@ import doctorModel from '../models/doctorModel.js';
 import jwt from 'jsonwebtoken';
 import appointmentModel from '../models/appointmentModel.js';
 import userModel from '../models/userModel.js';
+import { enqueueBookingSuccess } from "../workers/bookingSuccessQueue.js";
+import { enqueueEmail } from "../workers/emailQueue.js";
 
 //API for adding doctor
 const addDoctor = async (req, res) => {
@@ -178,4 +180,22 @@ const adminDashboard = async (req,res) => {
     }
 }
 
-export { addDoctor, loginAdmin, allDoctors,appointmentAdmin, appointmentCancel, adminDashboard }
+//API to manually mark appointment as paid (for cash payments)
+const markAppointmentPaid = async (req, res) => {
+    try {
+        const { appointmentId } = req.body;
+        
+        // Push to Success Queue to update DB idempotently
+        await enqueueBookingSuccess({ appointmentId });
+        
+        // Push to Email Queue to send confirmation email
+        await enqueueEmail({ appointmentId });
+        
+        res.json({ success: true, message: "Appointment manually marked as paid" });
+    } catch (error) {
+        console.log(error);
+        res.json({ success: false, message: error.message });
+    }
+}
+
+export { addDoctor, loginAdmin, allDoctors,appointmentAdmin, appointmentCancel, adminDashboard, markAppointmentPaid }

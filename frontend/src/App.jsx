@@ -44,8 +44,9 @@ const App = () => {
             <Route path="/my-profile" element={<MyProfile />} />
             <Route path="/my-appointments" element={<MyAppointments />} />
             <Route path="/appointment/:docId" element={<Appointment />} />
-            <Route path="/ai-diagnostics" element={<AiDiagnostic />} />
           </Route>
+          
+          <Route path="/ai-diagnostics" element={<AiDiagnostic />} />
         </Route>
 
         <Route element={<ProtectedRoute allowedRoles={['admin']} redirectTo="/login" unauthorizedTo="/unauthorized" />}>

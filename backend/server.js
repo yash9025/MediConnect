@@ -12,7 +12,13 @@ import userRouter from "./routes/userRoute.js";
 import labRoutes from "./routes/labRoutes.js";
 import chatRouter from "./routes/chatRoute.js";
 import agentRouter from "./routes/agentRoutes.js";
+import doctorModel from "./models/doctorModel.js";
+import queueChatModel from "./models/queueChatModel.js";
 
+// Initialize Workers
+import "./workers/bookingWorker.js";
+import "./workers/paymentWorker.js";
+import "./workers/emailWorker.js";
 const PORT = process.env.PORT || 4000;
 
 const app = express();
@@ -70,6 +76,47 @@ io.on("connection", (socket) => {
 
   socket.on("join-doctor-room", (docId) => {
     socket.join(`doctor_${docId}`);
+  });
+
+  socket.on("join-admin-room", () => {
+    socket.join("admin_global_queue_room");
+  });
+
+  socket.on("send-queue-message", async (data) => {
+    try {
+      const { docId, userId, appointmentId, sender, message, senderName, tokenNumber } = data;
+      
+      if (sender === "Patient") {
+        // Anti-spam check
+        const doctor = await doctorModel.findById(docId);
+        if (doctor && doctor.blockedPatients && doctor.blockedPatients.includes(userId)) {
+          // Send back an error just to the sender
+          socket.emit("chat-error", { message: "You have been restricted from sending messages to this doctor." });
+          return; // Early exit, DO NOT save to DB
+        }
+      }
+
+      const newMsg = new queueChatModel({
+        docId, userId, appointmentId, sender, message, senderName, tokenNumber
+      });
+      await newMsg.save();
+
+      io.to(`doctor_${docId}`).emit("receive-queue-message", newMsg);
+    } catch (error) {
+      console.error("Socket send-queue-message error:", error);
+    }
+  });
+
+  socket.on("report-spam", async (data) => {
+    try {
+      const { docId, userId } = data;
+      await doctorModel.findByIdAndUpdate(docId, {
+        $addToSet: { blockedPatients: userId } // $addToSet prevents duplicates
+      });
+      io.to(`doctor_${docId}`).emit("spam-reported", { userId });
+    } catch (error) {
+      console.error("Socket report-spam error:", error);
+    }
   });
 });
 
