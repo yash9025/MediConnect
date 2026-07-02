@@ -79,7 +79,12 @@ export const aiWorker = new Worker("ai-analysis-queue", async (job) => {
     await emitProgress(jobId, "ERROR", error.message);
     throw error; // Let BullMQ handle retries
   }
-}, { connection });
+}, { 
+  connection,
+  metrics: { maxDataPoints: 0 },
+  skipStalledCheck: true,
+  drainDelay: 300000 
+});
 
 // Worker event listeners for logging
 aiWorker.on('completed', (job, returnvalue) => {

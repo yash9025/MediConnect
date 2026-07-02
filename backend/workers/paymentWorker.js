@@ -34,5 +34,10 @@ export const paymentWorker = new Worker(
       throw new Error(`Payment not yet paid. Current status: ${orderInfo.status}`);
     }
   },
-  { connection }
+  { 
+    connection,
+    metrics: { maxDataPoints: 0 },
+    skipStalledCheck: true,
+    drainDelay: 300000 
+  }
 );

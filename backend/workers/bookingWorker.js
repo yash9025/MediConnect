@@ -19,7 +19,12 @@ export const bookingWorker = new Worker(
     await newAppointment.save();
     return { success: true, appointmentId: newAppointment._id };
   },
-  { connection }
+  { 
+    connection,
+    metrics: { maxDataPoints: 0 },
+    skipStalledCheck: true,
+    drainDelay: 300000 
+  }
 );
 
 // Rollback mechanism: if job fails permanently, release the slot
@@ -67,5 +72,10 @@ export const bookingSuccessWorker = new Worker(
     console.log(`Appointment ${appointmentId} successfully marked as confirmed and paid.`);
     return { success: true };
   },
-  { connection }
+  { 
+    connection,
+    metrics: { maxDataPoints: 0 },
+    skipStalledCheck: true,
+    drainDelay: 300000 
+  }
 );

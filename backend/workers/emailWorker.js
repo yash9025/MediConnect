@@ -64,5 +64,10 @@ export const emailWorker = new Worker(
     console.log(`Email successfully sent for appointment ${appointmentId}`);
     return { success: true, messageId: data.id };
   },
-  { connection }
+  { 
+    connection,
+    metrics: { maxDataPoints: 0 },
+    skipStalledCheck: true,
+    drainDelay: 300000 
+  }
 );
