@@ -67,8 +67,7 @@ const useMedicalChat = () => {
       try {
         const { data } = await axios.post(
           `${backendUrl}${CONFIG.ENDPOINTS.GET_HISTORY}`,
-          {},
-          { headers: { token }, signal: controller.signal }
+          {}, { signal: controller.signal }
         );
         if (data.success && data.history?.length > 0) {
           updateState({ messages: data.history });
@@ -88,8 +87,7 @@ const useMedicalChat = () => {
       try {
         await axios.post(
           `${backendUrl}${CONFIG.ENDPOINTS.SAVE_MESSAGE}`,
-          { message: msg },
-          { headers: { token } }
+          { message: msg }
         );
       } catch (err) {
         console.warn("Failed to save message history:", err);
@@ -148,8 +146,7 @@ const useMedicalChat = () => {
     
     try {
       const { data } = await axios.delete(
-        `${backendUrl}${CONFIG.ENDPOINTS.DELETE_HISTORY}`,
-        { headers: { token } }
+        `${backendUrl}${CONFIG.ENDPOINTS.DELETE_HISTORY}`
       );
       
       if (data.success) {

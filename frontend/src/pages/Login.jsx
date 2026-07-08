@@ -6,18 +6,6 @@ import axios from 'axios';
 import { toast } from 'react-toastify';
 import { useLocation, useNavigate } from 'react-router-dom';
 
-const decodeJwtPayload = (token) => {
-  try {
-    const payloadPart = token?.split('.')?.[1];
-    if (!payloadPart) return null;
-
-    const base64 = payloadPart.replace(/-/g, '+').replace(/_/g, '/');
-    return JSON.parse(atob(base64));
-  } catch {
-    return null;
-  }
-};
-
 const roleHomeMap = {
   admin: '/admin/dashboard',
   doctor: '/doctor/dashboard',
@@ -26,9 +14,9 @@ const roleHomeMap = {
 
 const Login = () => {
 
-  const { backendUrl, token, setToken } = useContext(AppContext);
-  const { setAToken } = useContext(AdminContext);
-  const { setDToken } = useContext(DoctorContext);
+  const { backendUrl, isAuthenticated, setIsAuthenticated, setRole } = useContext(AppContext);
+  const { setIsAdminAuthenticated } = useContext(AdminContext);
+  const { setIsDoctorAuthenticated } = useContext(DoctorContext);
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -44,21 +32,18 @@ const Login = () => {
     try {
       if (state === 'Sign Up') {
         const { data } = await axios.post(backendUrl + '/api/user/register', { name, password, email });
-        if (!data.success || !data.token) {
-          toast.error(data.message);
+        if (!data.success || !data.role) {
+          toast.error(data.message || 'Registration failed');
           return;
         }
 
-        const role = decodeJwtPayload(data.token)?.role;
-        if (!role) {
-          toast.error('Invalid authentication token.');
-          return;
-        }
-
-        localStorage.setItem('token', data.token);
-        setToken(data.token);
-        setAToken(role === 'admin' ? data.token : '');
-        setDToken(role === 'doctor' ? data.token : '');
+        const role = data.role;
+        localStorage.setItem('role', role);
+        setIsAuthenticated(true);
+        setRole(role);
+        if (role === 'admin') setIsAdminAuthenticated(true);
+        if (role === 'doctor') setIsDoctorAuthenticated(true);
+        
         toast.success('Account created successfully!');
         navigate(roleHomeMap[role] || '/', { replace: true });
         return;
@@ -70,12 +55,12 @@ const Login = () => {
         '/api/admin/login'
       ];
 
-      let authToken = '';
+      let assignedRole = '';
       for (const endpoint of loginEndpoints) {
         try {
           const { data } = await axios.post(`${backendUrl}${endpoint}`, { password, email });
-          if (data?.success && data?.token) {
-            authToken = data.token;
+          if (data?.success && data?.role) {
+            assignedRole = data.role;
             break;
           }
         } catch {
@@ -83,23 +68,19 @@ const Login = () => {
         }
       }
 
-      if (!authToken) {
+      if (!assignedRole) {
         toast.error('Invalid credentials');
         return;
       }
 
-      const role = decodeJwtPayload(authToken)?.role;
-      if (!role) {
-        toast.error('Invalid authentication token.');
-        return;
-      }
+      localStorage.setItem('role', assignedRole);
+      setIsAuthenticated(true);
+      setRole(assignedRole);
+      if (assignedRole === 'admin') setIsAdminAuthenticated(true);
+      if (assignedRole === 'doctor') setIsDoctorAuthenticated(true);
 
-      localStorage.setItem('token', authToken);
-      setToken(authToken);
-      setAToken(role === 'admin' ? authToken : '');
-      setDToken(role === 'doctor' ? authToken : '');
       toast.success('Logged in successfully!');
-      navigate(roleHomeMap[role] || '/', { replace: true });
+      navigate(roleHomeMap[assignedRole] || '/', { replace: true });
     } catch (error) {
       toast.error(error.response?.data?.message || error.message);
     } finally {
@@ -112,28 +93,14 @@ const Login = () => {
   }, [location.pathname]);
 
   useEffect(() => {
-    const storedToken = localStorage.getItem('token') || '';
-    console.log("Login Check - token:", token, "storedToken:", storedToken);
+    const storedRole = localStorage.getItem('role');
 
-    if (!token || !storedToken || token === 'undefined' || token === 'null') {
-      console.log("Login Check - Empty or invalid string token, staying on page.");
+    if (!isAuthenticated || !storedRole) {
       return;
     }
-
-    const decoded = decodeJwtPayload(token);
-    const role = decoded?.role;
-    console.log("Login Check - Decoded role:", role);
     
-    if (!role) {
-       console.log("Login Check - No role found. Clearing token.");
-       localStorage.removeItem('token');
-       setToken('');
-       return;
-    }
-    
-    console.log("Login Check - Navigating to:", roleHomeMap[role] || '/');
-    navigate(roleHomeMap[role] || '/', { replace: true });
-  }, [token, navigate, setToken]);
+    navigate(roleHomeMap[storedRole] || '/', { replace: true });
+  }, [isAuthenticated, navigate]);
 
   return (
     <form className="max-w-md mx-auto bg-white p-6 rounded-2xl shadow-lg mt-8 mb-8" onSubmit={onSubmitHandler}>

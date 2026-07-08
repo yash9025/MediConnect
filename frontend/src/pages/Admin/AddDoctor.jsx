@@ -49,9 +49,7 @@ const AddDoctor = () => {
             }
 
             // Sending data to backend with authentication token
-            const { data } = await axios.post(backendUrl + '/api/admin/add-doctor', formData, {
-                headers: { Authorization: `Bearer ${aToken}` }
-            });
+            const { data } = await axios.post(backendUrl + '/api/admin/add-doctor', formData);
             
                
 

@@ -41,7 +41,8 @@ const registerUser = async (req, res) => {
     const user = await newUser.save();
 
     const token = jwt.sign({ id: user._id, role: user.role }, process.env.JWT_SECRET);
-    res.json({ success: true, token });
+    res.cookie('token', token, { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'strict', maxAge: 7 * 24 * 60 * 60 * 1000 });
+    res.json({ success: true, role: user.role });
 
   } catch (error) {
     console.error(error);
@@ -62,7 +63,8 @@ const loginUser = async (req, res) => {
 
     if (isMatch) {
       const token = jwt.sign({ id: user._id, role: user.role }, process.env.JWT_SECRET);
-      res.json({ success: true, token });
+      res.cookie('token', token, { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'strict', maxAge: 7 * 24 * 60 * 60 * 1000 });
+      res.json({ success: true, role: user.role });
     } else {
       res.json({ success: false, message: "Invalid Credentials" });
     }
@@ -70,6 +72,11 @@ const loginUser = async (req, res) => {
     console.error(error);
     res.json({ success: false, message: error.message });
   }
+};
+
+const logoutUser = async (req, res) => {
+  res.clearCookie('token');
+  res.json({ success: true, message: 'Logged out successfully' });
 };
 
 // --- Profile Management ---
@@ -303,6 +310,7 @@ const verifyRazorpay = async (req, res) => {
 export {
   registerUser,
   loginUser,
+  logoutUser,
   getProfile,
   updateProfile,
   bookAppointment,

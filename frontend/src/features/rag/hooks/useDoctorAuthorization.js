@@ -17,8 +17,7 @@ export const useDoctorAuthorization = (reportId, token, backendUrl) => {
     try {
       const { data } = await axios.post(
         `${backendUrl}/api/user/authorize-doc`,
-        { reportId, doctorId },
-        { headers: { token } }
+        { reportId, doctorId }
       );
 
       if (data.success) {

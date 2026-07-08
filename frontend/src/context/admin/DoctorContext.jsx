@@ -4,46 +4,19 @@ import {toast} from 'react-toastify';
 
 export const DoctorContext = createContext()
 
-const decodeRole = (token) => {
-    try {
-        const payloadPart = token?.split('.')?.[1];
-        if (!payloadPart) return null;
-
-        const base64 = payloadPart.replace(/-/g, '+').replace(/_/g, '/');
-        return JSON.parse(atob(base64))?.role || null;
-    } catch {
-        return null;
-    }
-};
-
 const DoctorContextProvider = (props) => {
-
     const backendUrl = import.meta.env.VITE_BACKEND_URL;
-
-    const initialToken = localStorage.getItem('token') || '';
-    const [dToken ,setDTokenState] = useState(decodeRole(initialToken) === 'doctor' ? initialToken : '');
+    const [isDoctorAuthenticated, setIsDoctorAuthenticated] = useState(localStorage.getItem('role') === 'doctor');
     const [appointments,setAppointments] = useState([]);
     const [dashData , setDashData] = useState(false);
     const [profileData , setProfileData] = useState(false);
 
-    const setDToken = (nextToken) => {
-        if (!nextToken) {
-            setDTokenState('');
-            return;
-        }
-
-        localStorage.setItem('token', nextToken);
-        setDTokenState(nextToken);
-    };
-
-    const authHeaders = dToken ? { Authorization: `Bearer ${dToken}` } : {};
-
     const getAppointments = useCallback(async () => {
-        if (!dToken) return;
+        if (!isDoctorAuthenticated) return;
         
         try {
             
-            const {data} = await axios.get(backendUrl + '/api/doctor/appointments' , { headers: { Authorization: `Bearer ${dToken}` } });
+            const {data} = await axios.get(backendUrl + '/api/doctor/appointments');
             if(data.success){
                 setAppointments(data.appointments.reverse());
                 // console.log(data.appointments.reverse());
@@ -59,11 +32,11 @@ const DoctorContextProvider = (props) => {
     }, [dToken, backendUrl]);
 
     const completeAppointment = useCallback(async (appointmentId) => {
-        if (!dToken) return;
+        if (!isDoctorAuthenticated) return;
         
         try {
             
-            const {data} = await axios.post(backendUrl + '/api/doctor/complete-appointment' ,{appointmentId},{ headers: { Authorization: `Bearer ${dToken}` } });
+            const {data} = await axios.post(backendUrl + '/api/doctor/complete-appointment' ,{appointmentId});
             if(data.success){
                 toast.success(data.message);
                 getAppointments();
@@ -78,11 +51,11 @@ const DoctorContextProvider = (props) => {
     }, [dToken, backendUrl, getAppointments]);
 
     const cancelAppointment = useCallback(async (appointmentId) => {
-        if (!dToken) return;
+        if (!isDoctorAuthenticated) return;
         
         try {
             
-            const {data} = await axios.post(backendUrl + '/api/doctor/cancel-appointment' ,{appointmentId},{ headers: { Authorization: `Bearer ${dToken}` } });
+            const {data} = await axios.post(backendUrl + '/api/doctor/cancel-appointment' ,{appointmentId});
             if(data.success){
                 toast.success(data.message);
                 getAppointments();
@@ -98,11 +71,11 @@ const DoctorContextProvider = (props) => {
     }, [dToken, backendUrl, getAppointments]);
 
     const getDashData = useCallback(async () => {
-        if (!dToken) return;
+        if (!isDoctorAuthenticated) return;
         
         try {
             
-            const {data} = await axios.get(backendUrl + '/api/doctor/dashboard' , { headers: { Authorization: `Bearer ${dToken}` } });
+            const {data} = await axios.get(backendUrl + '/api/doctor/dashboard');
             if(data.success){
                 setDashData(data.dashData);
                 console.log(data.dashData);
@@ -118,9 +91,9 @@ const DoctorContextProvider = (props) => {
     }, [dToken, backendUrl]);
 
     const getProfileData = useCallback(async () => {
-        if (!dToken) return;
+        if (!isDoctorAuthenticated) return;
         try {
-            const {data} = await axios.get(backendUrl + '/api/doctor/profile' , { headers: { Authorization: `Bearer ${dToken}` } });
+            const {data} = await axios.get(backendUrl + '/api/doctor/profile');
             if(data.success){
               setProfileData(data.profileData);
               console.log(data.profileData);
@@ -132,7 +105,7 @@ const DoctorContextProvider = (props) => {
 
 
     const value={
-        dToken,setDToken,
+        isDoctorAuthenticated, setIsDoctorAuthenticated,
         backendUrl,
         appointments,setAppointments,
         getAppointments,

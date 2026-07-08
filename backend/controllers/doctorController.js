@@ -37,11 +37,17 @@ const loginDoctor = async (req, res) => {
     }
 
     const token = jwt.sign({ id: doctor._id, role: "doctor" }, process.env.JWT_SECRET);
-    res.json({ success: true, token });
+    res.cookie('token', token, { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'strict', maxAge: 7 * 24 * 60 * 60 * 1000 });
+    res.json({ success: true, role: 'doctor' });
   } catch (error) {
     console.error("Login Error:", error);
     res.json({ success: false, message: error.message });
   }
+};
+
+const logoutDoctor = async (req, res) => {
+  res.clearCookie('token');
+  res.json({ success: true, message: 'Logged out successfully' });
 };
 
 const doctorProfile = async (req, res) => {
@@ -446,6 +452,7 @@ export {
   changeAvailability,
   doctorList,
   loginDoctor,
+  logoutDoctor,
   appointmentsDoctor,
   appointmentCancel,
   appointmentComplete,

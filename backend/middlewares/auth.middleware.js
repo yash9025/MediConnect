@@ -1,17 +1,20 @@
 import jwt from "jsonwebtoken";
 
-const extractToken = (headers = {}) => {
-  const bearer = headers.authorization;
+const extractToken = (req) => {
+  const token = req.cookies?.token;
+  if (token) return token;
+
+  const bearer = req.headers?.authorization;
   if (bearer && bearer.startsWith("Bearer ")) {
     return bearer.split(" ")[1];
   }
 
-  return headers.token || headers.atoken || headers.dtoken || null;
+  return req.headers?.token || req.headers?.atoken || req.headers?.dtoken || null;
 };
 
 export const verifyToken = (req, res, next) => {
   try {
-    const token = extractToken(req.headers);
+    const token = extractToken(req);
 
     if (!token) {
       return res.status(401).json({ success: false, message: "Unauthorized: token missing" });

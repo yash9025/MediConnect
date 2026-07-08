@@ -5,27 +5,14 @@ import { toast } from 'react-toastify';
 
 export const AppContext = createContext(null);
 
-const decodeJwtPayload = (token) => {
-    try {
-        const payloadPart = token?.split('.')?.[1];
-        if (!payloadPart) return null;
-
-        const base64 = payloadPart.replace(/-/g, '+').replace(/_/g, '/');
-        return JSON.parse(atob(base64));
-    } catch {
-        return null;
-    }
-};
-
 const AppContextProvider = (props) => {
     const currencySymbol = '$';
     const backendUrl = import.meta.env.VITE_BACKEND_URL;
     
     const [doctors, setDoctors] = useState([]);
-    const [token, setToken] = useState(localStorage.getItem('token') || '');
+    const [isAuthenticated, setIsAuthenticated] = useState(!!localStorage.getItem('role'));
+    const [role, setRole] = useState(localStorage.getItem('role') || null);
     const [userData, setUserData] = useState(null);
-
-    const role = decodeJwtPayload(token)?.role || null;
 
     const getDoctorData = async () => {
         try {
@@ -43,7 +30,7 @@ const AppContextProvider = (props) => {
     };
 
     const loadUserProfileData = async () => {
-        if (!token) {
+        if (!isAuthenticated) {
             setUserData(null);
             return;
         }
@@ -54,9 +41,7 @@ const AppContextProvider = (props) => {
         }
 
         try {
-            const { data } = await axios.get(backendUrl + '/api/user/get-profile', {
-                headers: { Authorization: `Bearer ${token}` }
-            });
+            const { data } = await axios.get(backendUrl + '/api/user/get-profile');
             if (data.success) {
                 setUserData(data.userData);
             } else {
@@ -69,10 +54,16 @@ const AppContextProvider = (props) => {
     };
 
     // 🔹 New Logout Function
-    const logout = () => {
-        localStorage.removeItem('token');
-        setToken(''); // This ensures React detects the change
-        setUserData(null); //  Clears user data
+    const logout = async () => {
+        try {
+            await axios.post(backendUrl + '/api/user/logout');
+        } catch (error) {
+            console.error("Logout API failed", error);
+        }
+        localStorage.removeItem('role');
+        setIsAuthenticated(false);
+        setRole(null);
+        setUserData(null);
     };
 
     useEffect(() => {
@@ -80,23 +71,23 @@ const AppContextProvider = (props) => {
     }, []);
 
     useEffect(() => {
-        if (token) {
+        if (isAuthenticated) {
             loadUserProfileData();
         } else {
             setUserData(null);
         }
-    }, [token, role]);
+    }, [isAuthenticated, role]);
 
     return (
         <AppContext.Provider value={{
             doctors, getDoctorData,
             currencySymbol,
             currency: currencySymbol,
-            token, setToken, logout, // 
+            isAuthenticated, setIsAuthenticated, logout, // 
             backendUrl,
             userData, setUserData,
             loadUserProfileData,
-            role,
+            role, setRole,
             calculateAge: (dob) => {
                 const today = new Date();
                 const birthDate = new Date(dob);

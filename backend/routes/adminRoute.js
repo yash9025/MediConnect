@@ -1,5 +1,5 @@
 import express from "express";
-import { addDoctor , allDoctors, loginAdmin, appointmentAdmin, appointmentCancel, adminDashboard, markAppointmentPaid} from "../controllers/adminController.js"; //handles logic for adding doctor
+import { addDoctor , allDoctors, loginAdmin, logoutAdmin, appointmentAdmin, appointmentCancel, adminDashboard, markAppointmentPaid} from "../controllers/adminController.js"; //handles logic for adding doctor
 import upload from "../middlewares/multer.js";
 import { verifyToken, authorizeRoles } from "../middlewares/auth.middleware.js";
 import { changeAvailability } from "../controllers/doctorController.js";
@@ -10,6 +10,7 @@ adminRouter.post('/add-doctor', verifyToken, authorizeRoles('admin'), upload.sin
 //addDoctor → This is the controller function that processes the request after the file has been uploaded.
 //Role check is centralized through verifyToken + authorizeRoles('admin').
 adminRouter.post('/login' , loginAdmin);
+adminRouter.post('/logout' , logoutAdmin);
 adminRouter.post('/all-doctors' , verifyToken, authorizeRoles('admin'), allDoctors);
 adminRouter.post('/change-availability' , verifyToken, authorizeRoles('admin'), changeAvailability);
 adminRouter.get('/appointments' , verifyToken, authorizeRoles('admin'), appointmentAdmin);

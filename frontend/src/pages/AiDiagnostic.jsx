@@ -168,13 +168,11 @@ const AiDiagnostic = () => {
       const fd = new FormData();
       fd.append("pdf", pdfFile);
       const { data } = await axios.post(url, fd, {
-        headers: { Authorization: `Bearer ${token}`, "Content-Type": "multipart/form-data" },
+        headers: { "Content-Type": "multipart/form-data" },
       });
       return data;
     }
-    const { data } = await axios.post(url, { user_context: rawText }, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
+    const { data } = await axios.post(url, { user_context: rawText });
     return data;
   }, [backendUrl, rawText, pdfFile, inputMode, token]);
 

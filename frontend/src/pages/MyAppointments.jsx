@@ -101,8 +101,7 @@ const MyAppointments = () => {
     try {
       const { data } = await axios.post(
         `${backendUrl}/api/user/cancel-appointment`,
-        { appointmentId },
-        { headers: { token } }
+        { appointmentId }
       );
       if (data.success) {
         toast.success(data.message);
@@ -130,8 +129,7 @@ const MyAppointments = () => {
         try {
           await axios.post(
             `${backendUrl}/api/user/verifyrazorpay`,
-            response,
-            { headers: { token } }
+            response
           );
           getUserAppointments();
           navigate("/my-appointments");
@@ -149,8 +147,7 @@ const MyAppointments = () => {
     try {
       const { data } = await axios.post(
         `${backendUrl}/api/user/payment-razorpay`,
-        { appointmentId },
-        { headers: { token } }
+        { appointmentId }
       );
       if (data.success) {
         intitPay(data.order);

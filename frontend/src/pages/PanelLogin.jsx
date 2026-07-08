@@ -12,9 +12,9 @@ const PanelLogin = () => {
   const [password, setPassword] = useState('yash@994');
 
   const navigate = useNavigate();
-  const { backendUrl, setToken } = useContext(AppContext);
-  const { setAToken } = useContext(AdminContext);
-  const { setDToken } = useContext(DoctorContext);
+  const { backendUrl, setIsAuthenticated, setRole } = useContext(AppContext);
+  const { setIsAdminAuthenticated } = useContext(AdminContext);
+  const { setIsDoctorAuthenticated } = useContext(DoctorContext);
 
   const endpoint = useMemo(() => {
     return roleMode === 'admin' ? '/api/admin/login' : '/api/doctor/login';
@@ -39,21 +39,22 @@ const PanelLogin = () => {
     try {
       const { data } = await axios.post(`${backendUrl}${endpoint}`, { email, password });
 
-      if (!data?.success || !data?.token) {
+      if (!data?.success || !data?.role) {
         toast.error(data?.message || 'Login failed');
         return;
       }
 
-      localStorage.setItem('token', data.token);
-      setToken(data.token);
+      localStorage.setItem('role', data.role);
+      setIsAuthenticated(true);
+      setRole(data.role);
 
       if (roleMode === 'admin') {
-        setAToken(data.token);
+        setIsAdminAuthenticated(true);
         navigate('/admin/dashboard', { replace: true });
         return;
       }
 
-      setDToken(data.token);
+      setIsDoctorAuthenticated(true);
       navigate('/doctor/dashboard', { replace: true });
     } catch (error) {
       toast.error(error?.response?.data?.message || error.message || 'Login failed');

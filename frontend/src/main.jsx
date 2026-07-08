@@ -6,6 +6,9 @@ import { BrowserRouter } from 'react-router-dom' //BrowserRouter is a component 
 import AppContextProvider from './context/AppContext.jsx'
 import AdminContextProvider from './context/AdminContext.jsx'
 import DoctorContextProvider from './context/DoctorContext.jsx'
+import axios from 'axios';
+
+axios.defaults.withCredentials = true;
 
 createRoot(document.getElementById('root')).render(
   <BrowserRouter>

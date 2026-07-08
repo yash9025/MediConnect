@@ -1,5 +1,5 @@
 import express from 'express';
-import { getProfile, loginUser, registerUser, updateProfile, bookAppointment, listAppointment, cancelAppointment, paymentRazorpay, verifyRazorpay, getAppointmentStatus } from '../controllers/userController.js';
+import { getProfile, loginUser, logoutUser, registerUser, updateProfile, bookAppointment, listAppointment, cancelAppointment, paymentRazorpay, verifyRazorpay, getAppointmentStatus } from '../controllers/userController.js';
 import { requestVerification } from '../controllers/authorizeController.js'; 
 import { analyzeBloodReport } from '../controllers/aiController.js';
 import { verifyToken, authorizeRoles } from '../middlewares/auth.middleware.js';
@@ -9,6 +9,7 @@ const userRouter = express.Router();
 
 userRouter.post('/register' , registerUser);
 userRouter.post('/login' , loginUser);
+userRouter.post('/logout', logoutUser);
 userRouter.get('/get-profile' , verifyToken, authorizeRoles('patient'), getProfile);
 userRouter.post('/update-profile', upload.single('image'), verifyToken, authorizeRoles('patient'), updateProfile);
 userRouter.post('/book-appointment', verifyToken, authorizeRoles('patient'), bookAppointment);

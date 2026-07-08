@@ -88,7 +88,8 @@ const loginAdmin = async (req, res) => {
         if (email === process.env.ADMIN_EMAIL && password == process.env.ADMIN_PASSWORD) {
 
             const token = jwt.sign({ id: 'admin', role: 'admin' }, process.env.JWT_SECRET);
-            res.json({ success: true, token });
+            res.cookie('token', token, { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'strict', maxAge: 7 * 24 * 60 * 60 * 1000 });
+            res.json({ success: true, role: 'admin' });
 
         } else {
             res.json({ success: false, message: "Invalid Credentials" });
@@ -100,6 +101,11 @@ const loginAdmin = async (req, res) => {
 
     }
 }
+
+const logoutAdmin = async (req, res) => {
+    res.clearCookie('token');
+    res.json({ success: true, message: 'Logged out successfully' });
+};
 
 
 //API to get all doctors list for admin panel
@@ -198,4 +204,4 @@ const markAppointmentPaid = async (req, res) => {
     }
 }
 
-export { addDoctor, loginAdmin, allDoctors,appointmentAdmin, appointmentCancel, adminDashboard, markAppointmentPaid }
+export { addDoctor, loginAdmin, logoutAdmin, allDoctors, appointmentAdmin, appointmentCancel, adminDashboard, markAppointmentPaid }

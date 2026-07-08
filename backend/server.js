@@ -3,6 +3,7 @@ import cors from "cors";
 import "dotenv/config";
 import { createServer } from "http";
 import { Server } from "socket.io";
+import cookieParser from "cookie-parser";
 
 import connectDB from "./config/mongodb.js";
 import connectCloudinary from "./config/cloudinary.js";
@@ -34,7 +35,8 @@ const io = new Server(httpServer, {
 app.set("io", io);
 
 app.use(express.json());
-app.use(cors());
+app.use(cors({ origin: process.env.FRONTEND_URL || 'http://localhost:5173', credentials: true }));
+app.use(cookieParser());
 
 // Database Connections
 (async () => {

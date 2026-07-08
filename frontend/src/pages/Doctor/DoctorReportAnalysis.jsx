@@ -19,8 +19,7 @@ const DoctorReportAnalysis = () => {
         try {
             const { data } = await axios.post(
                 `${backendUrl}/api/doctor/verification-requests`,
-                {},
-                { headers: { Authorization: `Bearer ${dToken}` } }
+                {}
             );
 
             if (data.success) {
@@ -66,8 +65,7 @@ const DoctorReportAnalysis = () => {
         try {
             const { data } = await axios.post(
                 `${backendUrl}/api/doctor/send-advice`,
-                { reportId, doctorNotes: doctorNote },
-                { headers: { Authorization: `Bearer ${dToken}` } }
+                { reportId, doctorNotes: doctorNote }
             );
 
             if (data.success) {

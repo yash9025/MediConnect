@@ -4,44 +4,19 @@ import {toast} from 'react-toastify';
 
 export const AdminContext = createContext(); 
 
-const decodeRole = (token) => {
-    try {
-        const payloadPart = token?.split('.')?.[1];
-        if (!payloadPart) return null;
-
-        const base64 = payloadPart.replace(/-/g, '+').replace(/_/g, '/');
-        return JSON.parse(atob(base64))?.role || null;
-    } catch {
-        return null;
-    }
-};
-
 const AdminContextProvider = (props) => {
-    const initialToken = localStorage.getItem('token') || '';
-    const [aToken, setATokenState] = useState(decodeRole(initialToken) === 'admin' ? initialToken : '');
+    const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(localStorage.getItem('role') === 'admin');
     const [doctors , setDoctors] = useState([]);
     const [appointments,setAppointments] = useState([]);
     const [dashData , setDashData] = useState(false);
 
     const backendUrl = import.meta.env.VITE_BACKEND_URL; 
 
-    const setAToken = (nextToken) => {
-        if (!nextToken) {
-            setATokenState('');
-            return;
-        }
-
-        localStorage.setItem('token', nextToken);
-        setATokenState(nextToken);
-    };
-
-    const authHeaders = aToken ? { Authorization: `Bearer ${aToken}` } : {};
-
 const getAllDoctors = async () => {
-    if (!aToken) return;
+    if (!isAdminAuthenticated) return;
     
     try {
-        const {data} = await axios.post(backendUrl + '/api/admin/all-doctors' , {}, { headers: authHeaders });
+        const {data} = await axios.post(backendUrl + '/api/admin/all-doctors');
         if(data.success){
             setDoctors(data.doctors);
             console.log(data.doctors);
@@ -56,8 +31,7 @@ const getAllDoctors = async () => {
 
     useEffect(() => {
         const syncFromStorage = () => {
-            const token = localStorage.getItem('token') || '';
-            setATokenState(decodeRole(token) === 'admin' ? token : '');
+            setIsAdminAuthenticated(localStorage.getItem('role') === 'admin');
         };
 
         window.addEventListener('storage', syncFromStorage);
@@ -66,10 +40,9 @@ const getAllDoctors = async () => {
 
 
     const changeAvailability = async (docId) => {
-        if (!aToken) return;
-        
+        if (!isAdminAuthenticated) return;
         try {
-            const {data} = await axios.post(backendUrl + '/api/admin/change-availability' , {docId} , { headers: authHeaders });
+            const {data} = await axios.post(backendUrl + '/api/admin/change-availability' , {docId});
             if(data.success){
                 toast.success(data.message)
                 getAllDoctors();
@@ -83,11 +56,9 @@ const getAllDoctors = async () => {
     }
 
     const getAllAppointments = async () => {
-        if (!aToken) return;
-        
+        if (!isAdminAuthenticated) return;
         try {
-            
-            const {data} = await axios.get(backendUrl + '/api/admin/appointments' , { headers: authHeaders });
+            const {data} = await axios.get(backendUrl + '/api/admin/appointments');
             if(data.success){
                 setAppointments(data.appointments)
             }else{
@@ -98,12 +69,10 @@ const getAllDoctors = async () => {
         }
     }
 
-    const cancelAppointment= async (appointmentId) => {
-        if (!aToken) return;
-        
+    const cancelAppointment = async (appointmentId) => {
+        if (!isAdminAuthenticated) return;
         try {
-
-            const {data} = await axios.post(backendUrl + '/api/admin/cancel-appointment', {appointmentId} , { headers: authHeaders });
+            const {data} = await axios.post(backendUrl + '/api/admin/cancel-appointment' , {appointmentId});
             if(data.success){
                 toast.success(data.message);
                 getAllAppointments();
@@ -117,11 +86,9 @@ const getAllDoctors = async () => {
     }
 
     const getDashData = async () => {
-        if (!aToken) return;
-        
+        if (!isAdminAuthenticated) return;
         try {
-            
-            const {data} = await axios.get(backendUrl + '/api/admin/dashboard' , { headers: authHeaders });
+            const {data} = await axios.get(backendUrl + '/api/admin/dashboard');
             if(data.success){
                 setDashData(data.dashData);
                 console.log(data.dashData);
@@ -135,9 +102,8 @@ const getAllDoctors = async () => {
     }
 
     const value = {
-        aToken, setAToken,
-        backendUrl,doctors,
-        getAllDoctors,changeAvailability,
+        isAdminAuthenticated, setIsAdminAuthenticated,
+        backendUrl, doctors , getAllDoctors , changeAvailability,
         appointments,setAppointments,
         getAllAppointments,
         cancelAppointment,

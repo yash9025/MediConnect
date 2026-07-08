@@ -1,5 +1,5 @@
 import express from 'express';
-import { appointmentCancel, appointmentComplete, appointmentsDoctor, doctorDashboard, doctorList, doctorProfile, loginDoctor, updateDoctorProfile, nextPatient, markAbsent, getDoctorStatus, startOPD } from '../controllers/doctorController.js';
+import { appointmentCancel, appointmentComplete, appointmentsDoctor, doctorDashboard, doctorList, doctorProfile, loginDoctor, logoutDoctor, updateDoctorProfile, nextPatient, markAbsent, getDoctorStatus, startOPD } from '../controllers/doctorController.js';
 import { getPendingReports, verifyReport } from '../controllers/authorizeController.js';
 import { verifyToken, authorizeRoles } from '../middlewares/auth.middleware.js';
 
@@ -7,6 +7,7 @@ const doctorRouter = express.Router();
 
 doctorRouter.get('/list' , doctorList);
 doctorRouter.post('/login' , loginDoctor);
+doctorRouter.post('/logout', logoutDoctor);
 doctorRouter.get('/appointments' , verifyToken, authorizeRoles('doctor'), appointmentsDoctor);
 doctorRouter.post('/complete-appointment' , verifyToken, authorizeRoles('doctor'), appointmentComplete);
 doctorRouter.post('/cancel-appointment' , verifyToken, authorizeRoles('doctor'), appointmentCancel);
