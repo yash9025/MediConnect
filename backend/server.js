@@ -35,7 +35,13 @@ const io = new Server(httpServer, {
 app.set("io", io);
 
 app.use(express.json());
-app.use(cors({ origin: process.env.FRONTEND_URL || 'http://localhost:5173', credentials: true }));
+const allowedOrigins = [
+  process.env.FRONTEND_URL,
+  'http://localhost:5173',
+  'https://mediconnect-wx0o.onrender.com'
+].filter(Boolean);
+
+app.use(cors({ origin: allowedOrigins, credentials: true }));
 app.use(cookieParser());
 
 // Database Connections
