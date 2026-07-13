@@ -29,7 +29,7 @@ const DoctorContextProvider = (props) => {
             toast.error(error.message);
             
         }
-    }, [dToken, backendUrl]);
+    }, [isDoctorAuthenticated, backendUrl]);
 
     const completeAppointment = useCallback(async (appointmentId) => {
         if (!isDoctorAuthenticated) return;
@@ -48,7 +48,7 @@ const DoctorContextProvider = (props) => {
             console.log(error);
             toast.error(error.message);
         }
-    }, [dToken, backendUrl, getAppointments]);
+    }, [isDoctorAuthenticated, backendUrl, getAppointments]);
 
     const cancelAppointment = useCallback(async (appointmentId) => {
         if (!isDoctorAuthenticated) return;
@@ -68,7 +68,7 @@ const DoctorContextProvider = (props) => {
             console.log(error);
             toast.error(error.message);
         }
-    }, [dToken, backendUrl, getAppointments]);
+    }, [isDoctorAuthenticated, backendUrl, getAppointments]);
 
     const getDashData = useCallback(async () => {
         if (!isDoctorAuthenticated) return;
@@ -88,7 +88,7 @@ const DoctorContextProvider = (props) => {
             toast.error(error.message);
             
         }
-    }, [dToken, backendUrl]);
+    }, [isDoctorAuthenticated, backendUrl]);
 
     const getProfileData = useCallback(async () => {
         if (!isDoctorAuthenticated) return;
@@ -101,11 +101,12 @@ const DoctorContextProvider = (props) => {
         } catch (error) {
             console.log(error);
         }
-    }, [dToken, backendUrl]);
+    }, [isDoctorAuthenticated, backendUrl]);
 
 
     const value={
         isDoctorAuthenticated, setIsDoctorAuthenticated,
+        dToken: isDoctorAuthenticated, setDToken: setIsDoctorAuthenticated,
         backendUrl,
         appointments,setAppointments,
         getAppointments,

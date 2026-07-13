@@ -103,6 +103,7 @@ const getAllDoctors = async () => {
 
     const value = {
         isAdminAuthenticated, setIsAdminAuthenticated,
+        aToken: isAdminAuthenticated, setAToken: setIsAdminAuthenticated,
         backendUrl, doctors , getAllDoctors , changeAvailability,
         appointments,setAppointments,
         getAllAppointments,
