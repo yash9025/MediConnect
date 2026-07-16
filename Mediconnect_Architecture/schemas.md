@@ -1,0 +1,72 @@
+# Database Schemas
+
+## User Schema (`userModel.js`)
+- `name`: String (Required)
+- `email`: String (Required, Unique)
+- `password`: String (Required)
+- `image`: String (Default: base64 placeholder)
+- `address`: Object (Default: `{line: '', line2: ''}`)
+- `gender`: String (Default: "Not Selected")
+- `dob`: String (Default: "Not Selected")
+- `phone`: String (Default: '0000000000')
+- `role`: String (Enum: ['patient', 'doctor', 'admin'], Default: 'patient')
+
+## Doctor Schema (`doctorModel.js`)
+- `name`: String (Required)
+- `email`: String (Required, Unique)
+- `password`: String (Required)
+- `image`: String (Required)
+- `speciality`: String (Required)
+- `degree`: String (Required)
+- `experience`: String (Required)
+- `about`: String (Required)
+- `available`: Boolean (Default: true)
+- `fees`: Number (Required)
+- `address`: Object (Required)
+- `date`: Number (Required)
+- `currentSlotTime`: String (Default: "")
+- `opdActive`: Boolean (Default: false)
+- `opdStartTime`: Date (Default: null)
+- `lastQueueDate`: String (Default: "")
+- `lastUpdate`: Date (Default: null)
+- `lastCallTime`: Date (Default: null)
+- `consultationTimes`: Array of Numbers (Default: [])
+- `avgConsultationTime`: Number (Default: 15)
+- `slots_booked`: Object (Default: {})
+
+## Appointment Schema (`appointmentModel.js`)
+- `userId`: String (Required)
+- `docId`: String (Required)
+- `slotDate`: String (Required)
+- `slotTime`: String (Required)
+- `tokenNumber`: Number (Required)
+- `status`: String (Default: "Pending")
+- `userData`: Object (Required)
+- `docData`: Object (Required)
+- `amount`: Number (Required)
+- `date`: Number (Required)
+- `cancelled`: Boolean (Default: false)
+- `payment`: Boolean (Default: false)
+- `isCompleted`: Boolean (Default: false)
+*(Includes timestamps: createdAt, updatedAt)*
+
+## Report Schema (`reportModel.js`)
+- `userId`: String (Required)
+- `patientName`: String
+- `pdfUrl`: String
+- `aiAnalysis`: Object (Stores Gemini Results)
+- `verificationStatus`: String (Enum: ["Not Requested", "Pending", "Verified"], Default: "Not Requested")
+- `assignedDoctorId`: ObjectId (Ref: "doctor", Default: null)
+- `doctorNotes`: String (Default: "")
+- `authorizedDate`: Date
+*(Includes timestamps: createdAt, updatedAt)*
+
+## Chat Schema (`chatModel.js`)
+- `userId`: String (Required)
+- `history`: Array of Objects
+  - `type`: String (Enum: ["user", "bot"], Required)
+  - `text`: String
+  - `fileName`: String (Used if a file was uploaded)
+  - `isReport`: Boolean (Default: false, triggers custom component)
+  - `data`: Object (Stores AI Analysis JSON)
+- `lastUpdated`: Date (Default: Date.now)

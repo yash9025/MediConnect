@@ -6,7 +6,7 @@ import { toast } from 'react-toastify';
 import { MedicalChatBot } from '../features/rag';
 
 const MyProfile = () => {
-  const { userData, setUserData, token, backendUrl, loadUserProfileData } = useContext(AppContext);
+  const { userData, setUserData, backendUrl, loadUserProfileData } = useContext(AppContext);
 
   const [isEdit, setIsEdit] = useState(false);
   const [image, setImage] = useState(false);

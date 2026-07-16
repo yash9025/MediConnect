@@ -95,8 +95,6 @@ const Doctors = () => {
             </p>
           ) : (
             filteredDoctors.map((doctor) => {
-              const isSelected = selectedDoctor?._id === doctor._id;
-
               return (
                 <div
                   key={doctor._id}

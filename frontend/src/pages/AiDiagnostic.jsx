@@ -1,4 +1,5 @@
-import React, { useState, useCallback, useContext, useRef } from "react";
+import { useState, useCallback, useContext, useRef } from "react";
+import PropTypes from "prop-types";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { toast } from "react-toastify";
@@ -125,6 +126,9 @@ const V1ResultPanel = ({ data }) => {
   );
 };
 
+V1ResultPanel.propTypes = { data: PropTypes.object };
+V1ResultPanel.defaultProps = { data: null };
+
 // ─── Main Page Component ─────────────────────────────────────────────────────
 
 const AiDiagnostic = () => {
@@ -142,7 +146,6 @@ const AiDiagnostic = () => {
   const [loading, setLoading]       = useState(false);
   const [v1Result, setV1Result]     = useState(null);
   const [sseLogs, setSseLogs]       = useState([]);
-  const [sseReport, setSseReport]   = useState(null);
   const [streaming, setStreaming]   = useState(false);
   const abortRef                    = useRef(null);
 
@@ -151,7 +154,7 @@ const AiDiagnostic = () => {
   };
 
   const reset = () => {
-    setV1Result(null); setSseLogs([]); setSseReport(null); setStreaming(false);
+    setV1Result(null); setSseLogs([]); setStreaming(false);
     abortRef.current?.abort?.(); abortRef.current = null;
   };
 
@@ -174,7 +177,7 @@ const AiDiagnostic = () => {
     }
     const { data } = await axios.post(url, { user_context: rawText });
     return data;
-  }, [backendUrl, rawText, pdfFile, inputMode, token]);
+  }, [backendUrl, rawText, pdfFile, inputMode]);
 
   // V2 SSE stream
   const runSSE = useCallback((execMode) => {
@@ -217,7 +220,7 @@ const AiDiagnostic = () => {
               else if (evType === "complete") resolve({ mode: "v1" });
               else if (evType === "done")    resolve({ mode: "v2" });
               else if (evType === "error")   addLog(p.agent || "System", p.message, "error");
-            } catch (_) {}
+            } catch (e) { console.debug('SSE parse skip', e); }
           };
 
           const pump = async () => {

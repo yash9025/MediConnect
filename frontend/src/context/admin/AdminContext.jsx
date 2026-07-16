@@ -1,4 +1,5 @@
 import { useState, useEffect, createContext } from "react";
+import PropTypes from 'prop-types';
 import axios from 'axios';
 import {toast} from 'react-toastify';
 
@@ -118,5 +119,7 @@ const getAllDoctors = async () => {
         </AdminContext.Provider>
     );
 };
+
+AdminContextProvider.propTypes = { children: PropTypes.node.isRequired };
 
 export default AdminContextProvider;

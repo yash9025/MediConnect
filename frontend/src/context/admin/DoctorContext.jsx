@@ -1,4 +1,5 @@
 import { createContext, useState, useCallback } from "react";
+import PropTypes from 'prop-types';
 import axios from 'axios';
 import {toast} from 'react-toastify';
 
@@ -123,5 +124,7 @@ const DoctorContextProvider = (props) => {
         </DoctorContext.Provider>
     )
 }
+
+DoctorContextProvider.propTypes = { children: PropTypes.node.isRequired };
 
 export default DoctorContextProvider

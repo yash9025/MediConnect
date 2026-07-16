@@ -1,4 +1,5 @@
 import { createContext } from "react";
+import PropTypes from 'prop-types';
 
 export const AppContext = createContext()
 //This context will allow us to share data across multiple components without prop drilling.
@@ -35,5 +36,7 @@ const AppContextProvider = (props) => {
         </AppContext.Provider>
     )
 }
+
+AppContextProvider.propTypes = { children: PropTypes.node.isRequired };
 
 export default AppContextProvider

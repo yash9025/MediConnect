@@ -1,4 +1,4 @@
-import React, { useContext } from "react";
+import { useContext } from "react";
 import { assets } from "../../assets/admin/assets";
 import { AdminContext } from "../../context/AdminContext";
 import {useNavigate} from 'react-router-dom';
@@ -8,7 +8,7 @@ import { AppContext } from "../../context/AppContext";
 
 const Navbar = () => {
     const { aToken, setAToken } = useContext(AdminContext);
-    const {dToken , setDToken} = useContext(DoctorContext);
+    const { setDToken} = useContext(DoctorContext);
     const { logout: appLogout } = useContext(AppContext);
 
     const navigate = useNavigate();

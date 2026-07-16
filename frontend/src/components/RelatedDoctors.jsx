@@ -1,4 +1,5 @@
-import React, { useContext, useEffect, useState } from 'react';
+import { useContext, useEffect, useState } from 'react';
+import PropTypes from 'prop-types';
 import { AppContext } from '../context/AppContext';
 import { useNavigate } from 'react-router-dom';
 
@@ -52,5 +53,9 @@ const RelatedDoctors = ({ speciality, docId }) => {
         </div>
     );
 }
+RelatedDoctors.propTypes = {
+    speciality: PropTypes.string.isRequired,
+    docId: PropTypes.string.isRequired,
+};
 
 export default RelatedDoctors;
