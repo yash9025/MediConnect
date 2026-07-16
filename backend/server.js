@@ -13,6 +13,7 @@ import userRouter from "./routes/userRoute.js";
 import labRoutes from "./routes/labRoutes.js";
 import chatRouter from "./routes/chatRoute.js";
 import agentRouter from "./routes/agentRoutes.js";
+import authRouter from "./routes/authRoute.js";
 import doctorModel from "./models/doctorModel.js";
 import queueChatModel from "./models/queueChatModel.js";
 
@@ -62,6 +63,7 @@ app.use("/api/user", userRouter);
 app.use("/api/lab", labRoutes);
 app.use("/api/chat", chatRouter);
 app.use("/api/agent", agentRouter);
+app.use("/api/auth", authRouter);
 
 app.get("/", (req, res) => res.send("MediConnect API Service Running"));
 

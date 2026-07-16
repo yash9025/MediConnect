@@ -91,6 +91,10 @@ const doctorSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: 'user'
     }],
+    refreshTokens: {
+      type: [String],
+      default: []
+    },
   },
   { minimize: false }
 ); //Setting { minimize: false } ensures that empty objects are stored instead of being removed. In this case, even if slots_booked is empty, it will be saved as {} in the database.

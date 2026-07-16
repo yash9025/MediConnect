@@ -40,8 +40,14 @@ const registerUser = async (req, res) => {
     const newUser = new userModel({ name, email, password: hashedPassword });
     const user = await newUser.save();
 
-    const token = jwt.sign({ id: user._id, role: user.role }, process.env.JWT_SECRET);
-    res.cookie('token', token, { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'strict', maxAge: 7 * 24 * 60 * 60 * 1000 });
+    const accessToken = jwt.sign({ id: user._id, role: user.role }, process.env.JWT_SECRET, { expiresIn: '15m' });
+    const refreshToken = jwt.sign({ id: user._id, role: user.role }, process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET, { expiresIn: '7d' });
+
+    user.refreshTokens.push(refreshToken);
+    await user.save();
+
+    res.cookie('accessToken', accessToken, { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'strict', maxAge: 15 * 60 * 1000 });
+    res.cookie('refreshToken', refreshToken, { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'strict', maxAge: 7 * 24 * 60 * 60 * 1000 });
     res.json({ success: true, role: user.role });
 
   } catch (error) {
@@ -62,8 +68,14 @@ const loginUser = async (req, res) => {
     const isMatch = await bcrypt.compare(password, user.password);
 
     if (isMatch) {
-      const token = jwt.sign({ id: user._id, role: user.role }, process.env.JWT_SECRET);
-      res.cookie('token', token, { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'strict', maxAge: 7 * 24 * 60 * 60 * 1000 });
+      const accessToken = jwt.sign({ id: user._id, role: user.role }, process.env.JWT_SECRET, { expiresIn: '15m' });
+      const refreshToken = jwt.sign({ id: user._id, role: user.role }, process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET, { expiresIn: '7d' });
+
+      user.refreshTokens.push(refreshToken);
+      await user.save();
+
+      res.cookie('accessToken', accessToken, { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'strict', maxAge: 15 * 60 * 1000 });
+      res.cookie('refreshToken', refreshToken, { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'strict', maxAge: 7 * 24 * 60 * 60 * 1000 });
       res.json({ success: true, role: user.role });
     } else {
       res.json({ success: false, message: "Invalid Credentials" });
@@ -75,6 +87,23 @@ const loginUser = async (req, res) => {
 };
 
 const logoutUser = async (req, res) => {
+  try {
+    const refreshToken = req.cookies?.refreshToken;
+    // We get the user ID from the access token middleware if possible. Wait, logout doesn't have verifyToken middleware!
+    // Let's decode the refresh token to find the user id if userId isn't in req.
+    if (refreshToken) {
+      try {
+        const decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET);
+        await userModel.findByIdAndUpdate(decoded.id, { $pull: { refreshTokens: refreshToken } });
+      } catch (err) {
+        // invalid token, just clear cookies
+      }
+    }
+  } catch (error) {
+    console.error(error);
+  }
+  res.clearCookie('accessToken');
+  res.clearCookie('refreshToken');
   res.clearCookie('token');
   res.json({ success: true, message: 'Logged out successfully' });
 };

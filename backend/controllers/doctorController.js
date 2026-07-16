@@ -36,8 +36,14 @@ const loginDoctor = async (req, res) => {
       return res.json({ success: false, message: "Invalid Credentials" });
     }
 
-    const token = jwt.sign({ id: doctor._id, role: "doctor" }, process.env.JWT_SECRET);
-    res.cookie('token', token, { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'strict', maxAge: 7 * 24 * 60 * 60 * 1000 });
+    const accessToken = jwt.sign({ id: doctor._id, role: "doctor" }, process.env.JWT_SECRET, { expiresIn: '15m' });
+    const refreshToken = jwt.sign({ id: doctor._id, role: "doctor" }, process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET, { expiresIn: '7d' });
+
+    doctor.refreshTokens.push(refreshToken);
+    await doctor.save();
+
+    res.cookie('accessToken', accessToken, { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'strict', maxAge: 15 * 60 * 1000 });
+    res.cookie('refreshToken', refreshToken, { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'strict', maxAge: 7 * 24 * 60 * 60 * 1000 });
     res.json({ success: true, role: 'doctor' });
   } catch (error) {
     console.error("Login Error:", error);
@@ -46,6 +52,17 @@ const loginDoctor = async (req, res) => {
 };
 
 const logoutDoctor = async (req, res) => {
+  try {
+    const refreshToken = req.cookies?.refreshToken;
+    if (refreshToken) {
+      try {
+        const decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET);
+        await doctorModel.findByIdAndUpdate(decoded.id, { $pull: { refreshTokens: refreshToken } });
+      } catch (err) {}
+    }
+  } catch (error) {}
+  res.clearCookie('accessToken');
+  res.clearCookie('refreshToken');
   res.clearCookie('token');
   res.json({ success: true, message: 'Logged out successfully' });
 };

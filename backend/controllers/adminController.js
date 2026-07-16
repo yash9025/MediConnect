@@ -87,8 +87,11 @@ const loginAdmin = async (req, res) => {
 
         if (email === process.env.ADMIN_EMAIL && password == process.env.ADMIN_PASSWORD) {
 
-            const token = jwt.sign({ id: 'admin', role: 'admin' }, process.env.JWT_SECRET);
-            res.cookie('token', token, { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'strict', maxAge: 7 * 24 * 60 * 60 * 1000 });
+            const accessToken = jwt.sign({ id: 'admin', role: 'admin' }, process.env.JWT_SECRET, { expiresIn: '15m' });
+            const refreshToken = jwt.sign({ id: 'admin', role: 'admin' }, process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET, { expiresIn: '7d' });
+            
+            res.cookie('accessToken', accessToken, { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'strict', maxAge: 15 * 60 * 1000 });
+            res.cookie('refreshToken', refreshToken, { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'strict', maxAge: 7 * 24 * 60 * 60 * 1000 });
             res.json({ success: true, role: 'admin' });
 
         } else {
@@ -103,6 +106,8 @@ const loginAdmin = async (req, res) => {
 }
 
 const logoutAdmin = async (req, res) => {
+    res.clearCookie('accessToken');
+    res.clearCookie('refreshToken');
     res.clearCookie('token');
     res.json({ success: true, message: 'Logged out successfully' });
 };

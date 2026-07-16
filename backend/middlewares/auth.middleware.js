@@ -1,7 +1,7 @@
 import jwt from "jsonwebtoken";
 
 const extractToken = (req) => {
-  const token = req.cookies?.token;
+  const token = req.cookies?.accessToken || req.cookies?.token;
   if (token) return token;
 
   const bearer = req.headers?.authorization;

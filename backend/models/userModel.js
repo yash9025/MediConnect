@@ -38,6 +38,10 @@ const userSchema = new mongoose.Schema({
         type: String,
         enum: ['patient', 'doctor', 'admin'],
         default: 'patient'
+    },
+    refreshTokens: {
+        type: [String],
+        default: []
     }
 },{})
 
