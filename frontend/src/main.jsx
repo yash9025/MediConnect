@@ -15,15 +15,26 @@ axios.interceptors.response.use(
     async (error) => {
         const originalRequest = error.config;
         const backendUrl = import.meta.env.VITE_BACKEND_URL;
-        
-        if (error.response && error.response.status === 401 && !originalRequest._retry && !originalRequest.url.includes('/api/auth/refresh-token') && !originalRequest.url.includes('/api/user/login') && !originalRequest.url.includes('/api/doctor/login') && !originalRequest.url.includes('/api/admin/login')) {
+
+        // Only attempt token refresh on 401s from protected endpoints
+        const isAuthEndpoint = originalRequest.url.includes('/api/auth/refresh-token') ||
+            originalRequest.url.includes('/api/user/login') ||
+            originalRequest.url.includes('/api/doctor/login') ||
+            originalRequest.url.includes('/api/admin/login') ||
+            originalRequest.url.includes('/api/user/register');
+
+        if (error.response && error.response.status === 401 && !originalRequest._retry && !isAuthEndpoint) {
             originalRequest._retry = true;
             try {
+                // Try to silently refresh the access token
                 await axios.post(backendUrl + '/api/auth/refresh-token', {}, { withCredentials: true });
+                // Retry the original request with the new cookie
                 return axios(originalRequest);
             } catch (refreshError) {
+                // Refresh token also expired or invalid: force logout
                 localStorage.removeItem('role');
-                window.location.href = '/';
+                // Dispatch event so React contexts can update their state
+                window.dispatchEvent(new Event('auth:logout'));
                 return Promise.reject(refreshError);
             }
         }

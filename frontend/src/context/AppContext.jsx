@@ -45,11 +45,22 @@ const AppContextProvider = (props) => {
             if (data.success) {
                 setUserData(data.userData);
             } else {
-                toast.error(data.message);
+                // Server responded but says not authenticated — clear state
+                localStorage.removeItem('role');
+                setIsAuthenticated(false);
+                setRole(null);
+                setUserData(null);
             }
         } catch (error) {
-            console.error(error);
-            toast.error("Failed to fetch user data.");
+            // Network error or 401/403 — clear auth state cleanly
+            if (error.response && (error.response.status === 401 || error.response.status === 403)) {
+                localStorage.removeItem('role');
+                setIsAuthenticated(false);
+                setRole(null);
+                setUserData(null);
+            } else {
+                console.error('Failed to load profile:', error);
+            }
         }
     };
 
@@ -68,6 +79,15 @@ const AppContextProvider = (props) => {
 
     useEffect(() => {
         getDoctorData();
+
+        // Listen for forced logout from the global axios interceptor
+        const handleForcedLogout = () => {
+            setIsAuthenticated(false);
+            setRole(null);
+            setUserData(null);
+        };
+        window.addEventListener('auth:logout', handleForcedLogout);
+        return () => window.removeEventListener('auth:logout', handleForcedLogout);
     }, []);
 
     useEffect(() => {
