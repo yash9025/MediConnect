@@ -12,7 +12,7 @@ const roleHomeMap = {
 const Navbar = () => {
     const navigate = useNavigate();
 
-    const { token, logout: appLogout, userData, role } = useContext(AppContext);
+    const { isAuthenticated, logout: appLogout, userData, role } = useContext(AppContext);
 
     const [showMenu, setShowMenu] = useState(false);
 
@@ -22,8 +22,8 @@ const Navbar = () => {
         navigate('/');
     };
 
-    const isPatientSession = Boolean(token) && role === 'patient';
-    const isPanelSession = Boolean(token) && (role === 'admin' || role === 'doctor');
+    const isPatientSession = isAuthenticated && role === 'patient';
+    const isPanelSession = isAuthenticated && (role === 'admin' || role === 'doctor');
 
     const [showProfileMenu, setShowProfileMenu] = useState(false);
 
