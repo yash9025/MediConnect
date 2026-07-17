@@ -132,7 +132,7 @@ V1ResultPanel.defaultProps = { data: null };
 // ─── Main Page Component ─────────────────────────────────────────────────────
 
 const AiDiagnostic = () => {
-  const { token, backendUrl } = useContext(AppContext);
+  const { isAuthenticated, backendUrl } = useContext(AppContext);
   const navigate = useNavigate();
 
   // Input
@@ -192,7 +192,8 @@ const AiDiagnostic = () => {
 
       fetch(`${backendUrl}/api/agent/v2/stream`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}`, Accept: "text/event-stream" },
+        headers: { "Content-Type": "application/json", Accept: "text/event-stream" },
+        credentials: "include",
         body: JSON.stringify({ rawPdfText: textPayload, executionMode: execMode }),
         signal: ctrl.signal,
       })
@@ -239,13 +240,13 @@ const AiDiagnostic = () => {
         })
         .catch(reject);
     });
-  }, [backendUrl, rawText, pdfFile, inputMode, token]);
+  }, [backendUrl, rawText, pdfFile, inputMode]);
 
   // Analyze handler
   const handleAnalyze = async () => {
     if (inputMode === "text" && !rawText.trim()) { toast.error("Please paste your lab report text."); return; }
     if (inputMode === "pdf" && !pdfFile)         { toast.error("Please upload a PDF file.");           return; }
-    if (!token)                                  { toast.error("You must be logged in.");              return; }
+    if (!isAuthenticated)                         { toast.error("You must be logged in.");              return; }
 
     if (inputMode === "pdf" && mode === "v2") {
       toast.info("PDF uploads use Standard AI. Switching to V1.");
@@ -300,7 +301,7 @@ const AiDiagnostic = () => {
             Upload your blood report or paste the text. Powered by ICMR & MoHFW clinical guidelines.
           </p>
         </div>
-        {!token ? (
+        {!isAuthenticated ? (
           <div className="bg-white rounded-lg shadow-lg p-12 mb-6 border border-gray-100 text-center">
             <div className="text-6xl mb-4">🔒</div>
             <h2 className="text-2xl font-bold text-gray-800 mb-3">Login Required</h2>
