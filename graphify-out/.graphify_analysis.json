@@ -1,0 +1,838 @@
+{
+  "communities": {
+    "0": [
+      "backend_config_cloudinary",
+      "backend_config_cloudinary_connectcloudinary",
+      "backend_config_mongodb",
+      "backend_config_mongodb_connectdb",
+      "backend_controllers_authcontroller",
+      "backend_controllers_authcontroller_refreshtoken",
+      "backend_controllers_chatcontroller",
+      "backend_controllers_chatcontroller_deletechathistory",
+      "backend_controllers_chatcontroller_getchathistory",
+      "backend_controllers_chatcontroller_savechatmessage",
+      "backend_controllers_usercontroller",
+      "backend_controllers_usercontroller_bookappointment",
+      "backend_controllers_usercontroller_cancelappointment",
+      "backend_controllers_usercontroller_getappointmentstatus",
+      "backend_controllers_usercontroller_getprofile",
+      "backend_controllers_usercontroller_gettodaydatestr",
+      "backend_controllers_usercontroller_listappointment",
+      "backend_controllers_usercontroller_loginuser",
+      "backend_controllers_usercontroller_logoutuser",
+      "backend_controllers_usercontroller_paymentrazorpay",
+      "backend_controllers_usercontroller_razorpayinstance",
+      "backend_controllers_usercontroller_registeruser",
+      "backend_controllers_usercontroller_updateprofile",
+      "backend_controllers_usercontroller_verifyrazorpay",
+      "backend_middlewares_auth_middleware",
+      "backend_middlewares_auth_middleware_authorizeroles",
+      "backend_middlewares_auth_middleware_extracttoken",
+      "backend_middlewares_auth_middleware_verifytoken",
+      "backend_middlewares_multer",
+      "backend_middlewares_multer_storage",
+      "backend_middlewares_multer_upload",
+      "backend_models_chatmodel",
+      "backend_models_chatmodel_chatschema",
+      "backend_models_doctormodel",
+      "backend_models_doctormodel_doctorschema",
+      "backend_models_queuechatmodel",
+      "backend_models_queuechatmodel_queuechatschema",
+      "backend_routes_adminroute_adminrouter",
+      "backend_routes_agentroutes",
+      "backend_routes_agentroutes_agentrouter",
+      "backend_routes_authroute",
+      "backend_routes_authroute_authrouter",
+      "backend_routes_chatroute",
+      "backend_routes_chatroute_chatrouter",
+      "backend_routes_doctorroute_doctorrouter",
+      "backend_routes_labroutes",
+      "backend_routes_labroutes_labrouter",
+      "backend_routes_userroute",
+      "backend_routes_userroute_userrouter",
+      "backend_scripts_seeddoctors",
+      "backend_scripts_seeddoctors_doctornames",
+      "backend_scripts_seeddoctors_genericimages",
+      "backend_scripts_seeddoctors_seeddoctors",
+      "backend_scripts_seeddoctors_specialties",
+      "backend_server",
+      "backend_server_allowedorigins",
+      "backend_server_app",
+      "backend_server_gracefulshutdown",
+      "backend_server_httpserver",
+      "backend_server_io",
+      "backend_server_server",
+      "backend_workers_bookingqueue",
+      "backend_workers_bookingqueue_bookingqueue",
+      "backend_workers_bookingqueue_enqueuebooking",
+      "backend_workers_paymentqueue",
+      "backend_workers_paymentqueue_enqueuepaymentverification",
+      "backend_workers_paymentqueue_paymentqueue"
+    ],
+    "1": [
+      "frontend_src_app",
+      "frontend_src_app_app",
+      "frontend_src_assets_admin_assets",
+      "frontend_src_assets_admin_assets_assets",
+      "frontend_src_components_admin_navbar",
+      "frontend_src_components_admin_navbar_navbar",
+      "frontend_src_components_admin_panellayout",
+      "frontend_src_components_admin_panellayout_panellayout",
+      "frontend_src_components_admin_sidebar",
+      "frontend_src_components_admin_sidebar_sidebar",
+      "frontend_src_components_livequeue",
+      "frontend_src_components_livequeue_livequeue",
+      "frontend_src_components_livequeue_parseslotminutes",
+      "frontend_src_components_queuechat",
+      "frontend_src_components_queuechat_queuechat",
+      "frontend_src_components_relateddoctors",
+      "frontend_src_components_relateddoctors_relateddoctors",
+      "frontend_src_context_admin_admincontext",
+      "frontend_src_context_admin_admincontext_admincontext",
+      "frontend_src_context_admin_admincontext_admincontextprovider",
+      "frontend_src_context_admin_doctorcontext",
+      "frontend_src_context_admin_doctorcontext_doctorcontext",
+      "frontend_src_context_admin_doctorcontext_doctorcontextprovider",
+      "frontend_src_context_admincontext",
+      "frontend_src_context_appcontext",
+      "frontend_src_context_appcontext_appcontext",
+      "frontend_src_context_appcontext_appcontextprovider",
+      "frontend_src_context_doctorcontext",
+      "frontend_src_features_rag_components_medicalchatbot_medicalchatbot",
+      "frontend_src_main",
+      "frontend_src_pages_admin_adddoctor",
+      "frontend_src_pages_admin_adddoctor_adddoctor",
+      "frontend_src_pages_admin_allappointments",
+      "frontend_src_pages_admin_allappointments_allappointments",
+      "frontend_src_pages_admin_dashboard",
+      "frontend_src_pages_admin_dashboard_admindashboard",
+      "frontend_src_pages_admin_doctorlist",
+      "frontend_src_pages_admin_doctorlist_doctorlist",
+      "frontend_src_pages_appointment",
+      "frontend_src_pages_appointment_appointment",
+      "frontend_src_pages_doctor_doctorappointment",
+      "frontend_src_pages_doctor_doctorappointment_doctorappointment",
+      "frontend_src_pages_doctor_doctordashboard",
+      "frontend_src_pages_doctor_doctordashboard_doctordashboard",
+      "frontend_src_pages_doctor_doctorprofile",
+      "frontend_src_pages_doctor_doctorprofile_doctorprofile",
+      "frontend_src_pages_doctor_doctorreportanalysis",
+      "frontend_src_pages_doctor_doctorreportanalysis_doctorreportanalysis",
+      "frontend_src_pages_doctors",
+      "frontend_src_pages_doctors_doctors",
+      "frontend_src_pages_login",
+      "frontend_src_pages_login_login",
+      "frontend_src_pages_login_rolehomemap",
+      "frontend_src_pages_myappointments",
+      "frontend_src_pages_myappointments_myappointments",
+      "frontend_src_pages_myprofile",
+      "frontend_src_pages_myprofile_myprofile",
+      "frontend_src_pages_panellogin",
+      "frontend_src_pages_panellogin_panellogin",
+      "frontend_src_pages_unauthorized",
+      "frontend_src_pages_unauthorized_unauthorized"
+    ],
+    "2": [
+      "frontend_src_features_rag_components_airesponsedisplay",
+      "frontend_src_features_rag_components_airesponsedisplay_airesponsedisplay",
+      "frontend_src_features_rag_components_diagnosiscard",
+      "frontend_src_features_rag_components_diagnosiscard_diagnosiscard",
+      "frontend_src_features_rag_components_doctorcard",
+      "frontend_src_features_rag_components_doctorcard_doctorcard",
+      "frontend_src_features_rag_components_doctorcard_formatfees",
+      "frontend_src_features_rag_components_emptystate",
+      "frontend_src_features_rag_components_emptystate_emptystate",
+      "frontend_src_features_rag_components_lifestyleadvicecard",
+      "frontend_src_features_rag_components_lifestyleadvicecard_lifestyleadvicecard",
+      "frontend_src_features_rag_components_medicalchatbot",
+      "frontend_src_features_rag_components_medicalchatbot_chatheader",
+      "frontend_src_features_rag_components_medicalchatbot_chattrigger",
+      "frontend_src_features_rag_components_medicalchatbot_config",
+      "frontend_src_features_rag_components_medicalchatbot_inputarea",
+      "frontend_src_features_rag_components_medicalchatbot_loadingbubble",
+      "frontend_src_features_rag_components_medicalchatbot_messagelist",
+      "frontend_src_features_rag_components_medicalchatbot_resetconfirmmodal",
+      "frontend_src_features_rag_components_medicalchatbot_usemedicalchat",
+      "frontend_src_features_rag_components_ragsourcescard",
+      "frontend_src_features_rag_components_ragsourcescard_formatsourcename",
+      "frontend_src_features_rag_components_ragsourcescard_ragsourcescard",
+      "frontend_src_features_rag_components_reportsummarycard",
+      "frontend_src_features_rag_components_reportsummarycard_reportsummarycard",
+      "frontend_src_features_rag_components_warningsignscard",
+      "frontend_src_features_rag_components_warningsignscard_warningsignscard",
+      "frontend_src_features_rag_config_uiconfig",
+      "frontend_src_features_rag_config_uiconfig_category_colors",
+      "frontend_src_features_rag_config_uiconfig_getreplybadge",
+      "frontend_src_features_rag_config_uiconfig_geturgencyconfig",
+      "frontend_src_features_rag_config_uiconfig_reply_badges",
+      "frontend_src_features_rag_config_uiconfig_urgency_styles",
+      "frontend_src_features_rag_hooks_usedoctorauthorization",
+      "frontend_src_features_rag_hooks_usedoctorauthorization_usedoctorauthorization",
+      "frontend_src_features_rag_index",
+      "frontend_src_features_rag_utils_doctorscoring",
+      "frontend_src_features_rag_utils_doctorscoring_calculateavailabilityscore",
+      "frontend_src_features_rag_utils_doctorscoring_calculatedoctorscore",
+      "frontend_src_features_rag_utils_doctorscoring_calculateexperiencescore",
+      "frontend_src_features_rag_utils_doctorscoring_calculatepricingscore",
+      "frontend_src_features_rag_utils_doctorscoring_calculatespecialtyscore",
+      "frontend_src_features_rag_utils_doctorscoring_countbookedslots",
+      "frontend_src_features_rag_utils_doctorscoring_extractexperience",
+      "frontend_src_features_rag_utils_doctorscoring_getscorebreakdown",
+      "frontend_src_features_rag_utils_doctorscoring_optimal_fee_range",
+      "frontend_src_features_rag_utils_doctorscoring_scoring_weights",
+      "frontend_src_features_rag_utils_doctorscoring_sortdoctorsbyscore"
+    ],
+    "3": [
+      "backend_agents_extractoragent",
+      "backend_agents_extractoragent_extractorschema",
+      "backend_agents_extractoragent_llm",
+      "backend_agents_extractoragent_runextractor",
+      "backend_agents_graphstate",
+      "backend_agents_graphstate_graphstate",
+      "backend_agents_medicalgraph",
+      "backend_agents_medicalgraph_checkpointer",
+      "backend_agents_medicalgraph_domains",
+      "backend_agents_medicalgraph_graphbuilder",
+      "backend_agents_medicalgraph_medicalgraph",
+      "backend_agents_medicalgraph_routeafterextraction",
+      "backend_agents_medicalgraph_routetospecialists",
+      "backend_agents_medicalgraph_routevalidation",
+      "backend_agents_specialistagents",
+      "backend_agents_specialistagents_createspecialistagent",
+      "backend_agents_specialistagents_embeddings",
+      "backend_agents_specialistagents_llm",
+      "backend_agents_specialistagents_queryspecialistguidelines",
+      "backend_agents_synthesizeragent",
+      "backend_agents_synthesizeragent_llm",
+      "backend_agents_synthesizeragent_runsynthesizer",
+      "backend_agents_synthesizeragent_synthesizerschema",
+      "backend_agents_triageagent",
+      "backend_agents_triageagent_llm",
+      "backend_agents_triageagent_runtriage",
+      "backend_scripts_test_e2e",
+      "backend_scripts_test_e2e_runtests",
+      "backend_scripts_test_phase2",
+      "backend_scripts_test_phase2_runtests",
+      "backend_scripts_test_phase3",
+      "backend_scripts_test_phase3_runtests"
+    ],
+    "4": [
+      "backend_config_redis",
+      "backend_config_redis_connection",
+      "backend_controllers_admincontroller",
+      "backend_controllers_admincontroller_adddoctor",
+      "backend_controllers_admincontroller_admindashboard",
+      "backend_controllers_admincontroller_alldoctors",
+      "backend_controllers_admincontroller_appointmentadmin",
+      "backend_controllers_admincontroller_appointmentcancel",
+      "backend_controllers_admincontroller_loginadmin",
+      "backend_controllers_admincontroller_logoutadmin",
+      "backend_controllers_admincontroller_markappointmentpaid",
+      "backend_models_appointmentmodel",
+      "backend_models_appointmentmodel_appointmentschema",
+      "backend_models_usermodel",
+      "backend_models_usermodel_userschema",
+      "backend_routes_adminroute",
+      "backend_workers_bookingsuccessqueue",
+      "backend_workers_bookingsuccessqueue_bookingsuccessqueue",
+      "backend_workers_bookingsuccessqueue_enqueuebookingsuccess",
+      "backend_workers_bookingworker",
+      "backend_workers_bookingworker_bookingsuccessworker",
+      "backend_workers_bookingworker_bookingworker",
+      "backend_workers_emailqueue",
+      "backend_workers_emailqueue_emailqueue",
+      "backend_workers_emailqueue_enqueueemail",
+      "backend_workers_emailworker",
+      "backend_workers_emailworker_emailworker",
+      "backend_workers_emailworker_resend",
+      "backend_workers_paymentworker",
+      "backend_workers_paymentworker_paymentworker",
+      "backend_workers_paymentworker_razorpayinstance"
+    ],
+    "5": [
+      "eslint",
+      "eslint_js",
+      "eslint_plugin_react",
+      "eslint_plugin_react_hooks",
+      "eslint_plugin_react_refresh",
+      "frontend_package",
+      "frontend_package_devdependencies",
+      "frontend_package_devdependencies_eslint",
+      "frontend_package_devdependencies_eslint_js",
+      "frontend_package_devdependencies_eslint_plugin_react",
+      "frontend_package_devdependencies_eslint_plugin_react_hooks",
+      "frontend_package_devdependencies_eslint_plugin_react_refresh",
+      "frontend_package_devdependencies_globals",
+      "frontend_package_devdependencies_types_react",
+      "frontend_package_devdependencies_types_react_dom",
+      "frontend_package_devdependencies_vite",
+      "frontend_package_devdependencies_vitejs_plugin_react",
+      "frontend_package_name",
+      "frontend_package_private",
+      "frontend_package_scripts",
+      "frontend_package_scripts_build",
+      "frontend_package_scripts_dev",
+      "frontend_package_scripts_lint",
+      "frontend_package_scripts_preview",
+      "frontend_package_type",
+      "frontend_package_version",
+      "globals",
+      "types_react",
+      "types_react_dom",
+      "vite",
+      "vitejs_plugin_react"
+    ],
+    "6": [
+      "frontend_src_assets_assets",
+      "frontend_src_assets_assets_assets",
+      "frontend_src_assets_assets_doctors",
+      "frontend_src_assets_assets_specialitydata",
+      "frontend_src_components_banner",
+      "frontend_src_components_banner_banner",
+      "frontend_src_components_banner_rolehomemap",
+      "frontend_src_components_footer",
+      "frontend_src_components_footer_footer",
+      "frontend_src_components_header",
+      "frontend_src_components_header_header",
+      "frontend_src_components_mainlayout",
+      "frontend_src_components_mainlayout_mainlayout",
+      "frontend_src_components_navbar",
+      "frontend_src_components_navbar_navbar",
+      "frontend_src_components_navbar_rolehomemap",
+      "frontend_src_components_specialitymenu",
+      "frontend_src_components_specialitymenu_specialitymenu",
+      "frontend_src_components_topdoctors",
+      "frontend_src_components_topdoctors_topdoctors",
+      "frontend_src_pages_about",
+      "frontend_src_pages_about_about",
+      "frontend_src_pages_contact",
+      "frontend_src_pages_contact_contact",
+      "frontend_src_pages_home",
+      "frontend_src_pages_home_home"
+    ],
+    "7": [
+      "axios",
+      "framer_motion",
+      "frontend_package_dependencies",
+      "frontend_package_dependencies_axios",
+      "frontend_package_dependencies_framer_motion",
+      "frontend_package_dependencies_jspdf",
+      "frontend_package_dependencies_moment",
+      "frontend_package_dependencies_react",
+      "frontend_package_dependencies_react_dom",
+      "frontend_package_dependencies_react_router_dom",
+      "frontend_package_dependencies_react_toastify",
+      "frontend_package_dependencies_socket_io_client",
+      "frontend_package_dependencies_tailwindcss",
+      "frontend_package_dependencies_tailwindcss_vite",
+      "frontend_package_dependencies_toast",
+      "frontend_package_json_socket_io_client",
+      "jspdf",
+      "moment",
+      "react",
+      "react_dom",
+      "react_router_dom",
+      "react_toastify",
+      "tailwindcss",
+      "tailwindcss_vite",
+      "toast"
+    ],
+    "8": [
+      "backend_controllers_authorizecontroller",
+      "backend_controllers_authorizecontroller_getpendingreports",
+      "backend_controllers_authorizecontroller_requestverification",
+      "backend_controllers_authorizecontroller_verifyreport",
+      "backend_controllers_doctorcontroller",
+      "backend_controllers_doctorcontroller_appointmentcancel",
+      "backend_controllers_doctorcontroller_appointmentcomplete",
+      "backend_controllers_doctorcontroller_appointmentsdoctor",
+      "backend_controllers_doctorcontroller_changeavailability",
+      "backend_controllers_doctorcontroller_doctordashboard",
+      "backend_controllers_doctorcontroller_doctorlist",
+      "backend_controllers_doctorcontroller_doctorprofile",
+      "backend_controllers_doctorcontroller_getdoctorstatus",
+      "backend_controllers_doctorcontroller_gettodaystr",
+      "backend_controllers_doctorcontroller_logindoctor",
+      "backend_controllers_doctorcontroller_logoutdoctor",
+      "backend_controllers_doctorcontroller_markabsent",
+      "backend_controllers_doctorcontroller_nextpatient",
+      "backend_controllers_doctorcontroller_parseslotminutes",
+      "backend_controllers_doctorcontroller_resetqueue",
+      "backend_controllers_doctorcontroller_startopd",
+      "backend_controllers_doctorcontroller_updatedoctorprofile",
+      "backend_routes_doctorroute"
+    ],
+    "9": [
+      "backend_controllers_agentcontroller",
+      "backend_controllers_agentcontroller_emit",
+      "backend_controllers_agentcontroller_formatnodename",
+      "backend_controllers_agentcontroller_getendmessage",
+      "backend_controllers_agentcontroller_getstartmessage",
+      "backend_controllers_agentcontroller_streamagentanalysis",
+      "backend_controllers_labcontroller",
+      "backend_controllers_labcontroller_analyzereport",
+      "backend_controllers_labcontroller_config",
+      "backend_controllers_labcontroller_embeddings",
+      "backend_controllers_labcontroller_expandquerywithllm",
+      "backend_controllers_labcontroller_genai",
+      "backend_controllers_labcontroller_generatediagnosis",
+      "backend_controllers_labcontroller_getvectorstore",
+      "backend_controllers_labcontroller_model",
+      "backend_controllers_labcontroller_processpdf",
+      "backend_controllers_labcontroller_retrievemedicalcontext",
+      "backend_models_reportmodel",
+      "backend_models_reportmodel_reportschema",
+      "backend_utils_doctorservices",
+      "backend_utils_doctorservices_findmatchingdoctors"
+    ],
+    "10": [
+      "backend_config_pubsub",
+      "backend_config_pubsub_redispublisher",
+      "backend_config_pubsub_redissubscriber",
+      "backend_config_pubsub_retrystrategy",
+      "backend_controllers_aicontroller",
+      "backend_controllers_aicontroller_analyzebloodreport",
+      "backend_scripts_test_phase1",
+      "backend_scripts_test_phase1_runtests",
+      "backend_scripts_test_phase4",
+      "backend_scripts_test_phase4_runtests",
+      "backend_utils_piisanitizer",
+      "backend_utils_piisanitizer_pii_patterns",
+      "backend_utils_piisanitizer_rehydratemedicalreport",
+      "backend_utils_piisanitizer_sanitizemedicalreport",
+      "backend_workers_aiqueue",
+      "backend_workers_aiqueue_aijobqueue",
+      "backend_workers_aiqueue_enqueuemedicalreport",
+      "backend_workers_aiworker",
+      "backend_workers_aiworker_aiworker",
+      "backend_workers_aiworker_emitprogress"
+    ],
+    "11": [
+      "backend_package",
+      "backend_package_author",
+      "backend_package_description",
+      "backend_package_license",
+      "backend_package_main",
+      "backend_package_name",
+      "backend_package_scripts",
+      "backend_package_scripts_server",
+      "backend_package_scripts_start",
+      "backend_package_scripts_test",
+      "backend_package_type",
+      "backend_package_version"
+    ],
+    "12": [
+      "frontend_scripts_fix_import_paths",
+      "frontend_scripts_fix_import_paths_existsimporttarget",
+      "frontend_scripts_fix_import_paths_exts",
+      "frontend_scripts_fix_import_paths_files",
+      "frontend_scripts_fix_import_paths_getallfiles",
+      "frontend_scripts_fix_import_paths_indexexts",
+      "frontend_scripts_fix_import_paths_projectroot",
+      "frontend_scripts_fix_import_paths_srcroot",
+      "frontend_scripts_fix_import_paths_toposix",
+      "frontend_scripts_fix_import_paths_tryresolve"
+    ],
+    "13": [
+      "frontend_src_components_agentstatusboard",
+      "frontend_src_components_agentstatusboard_agent_config",
+      "frontend_src_components_agentstatusboard_agentstatusboard",
+      "frontend_src_components_agentstatusboard_getconfig",
+      "frontend_src_components_agentstatusboard_logline",
+      "frontend_src_pages_aidiagnostic",
+      "frontend_src_pages_aidiagnostic_aidiagnostic",
+      "frontend_src_pages_aidiagnostic_modes",
+      "frontend_src_pages_aidiagnostic_urgency",
+      "frontend_src_pages_aidiagnostic_v1resultpanel"
+    ],
+    "14": [
+      "backend_package_dependencies",
+      "backend_package_dependencies_bcryptjs",
+      "backend_package_dependencies_langchain_langgraph",
+      "backend_package_dependencies_uuid",
+      "backend_package_dependencies_validator",
+      "bcryptjs",
+      "langchain_langgraph",
+      "uuid",
+      "validator"
+    ],
+    "15": [
+      "backend_scripts_ingestdata",
+      "backend_scripts_ingestdata_args",
+      "backend_scripts_ingestdata_buildmedicalindex",
+      "backend_scripts_ingestdata_categorizedocument",
+      "backend_scripts_ingestdata_config",
+      "backend_scripts_ingestdata_dirname",
+      "backend_scripts_ingestdata_embeddings",
+      "backend_scripts_ingestdata_filename",
+      "backend_scripts_ingestdata_queryindex"
+    ],
+    "16": [
+      "backend_scripts_evals",
+      "backend_scripts_evals_evaluatecontextprecision",
+      "backend_scripts_evals_evaluatefaithfulness",
+      "backend_scripts_evals_genai",
+      "backend_scripts_evals_goldendataset",
+      "backend_scripts_evals_model",
+      "backend_scripts_evals_runevals"
+    ],
+    "17": [
+      "frontend_script",
+      "frontend_script_files",
+      "frontend_script_fs",
+      "frontend_script_path",
+      "frontend_script_walksync"
+    ],
+    "18": [
+      "frontend_src_components_protectedroute",
+      "frontend_src_components_protectedroute_decodejwtpayload",
+      "frontend_src_components_protectedroute_gettoken",
+      "frontend_src_components_protectedroute_protectedroute",
+      "frontend_src_components_protectedroute_rolehomemap"
+    ],
+    "19": [
+      "backend_agents_researcheragent",
+      "backend_agents_researcheragent_llm",
+      "backend_agents_researcheragent_mockqueryvectordb",
+      "backend_agents_researcheragent_runresearcher"
+    ],
+    "20": [
+      "backend_agents_lifestyleagent",
+      "backend_agents_lifestyleagent_llm",
+      "backend_agents_lifestyleagent_runlifestylecoach"
+    ],
+    "21": [
+      "frontend_src_context_admin_appcontext",
+      "frontend_src_context_admin_appcontext_appcontext",
+      "frontend_src_context_admin_appcontext_appcontextprovider"
+    ],
+    "22": [
+      "backend_package_dependencies_langchain_community",
+      "langchain_community"
+    ],
+    "23": [
+      "backend_package_dependencies_bullmq",
+      "bullmq"
+    ],
+    "24": [
+      "backend_package_dependencies_cloudinary",
+      "cloudinary"
+    ],
+    "25": [
+      "backend_package_dependencies_cookie_parser",
+      "cookie_parser"
+    ],
+    "26": [
+      "backend_package_dependencies_cors",
+      "cors"
+    ],
+    "27": [
+      "backend_package_dependencies_dotenv",
+      "dotenv"
+    ],
+    "28": [
+      "backend_package_dependencies_express",
+      "express"
+    ],
+    "29": [
+      "backend_package_dependencies_google_generative_ai",
+      "google_generative_ai"
+    ],
+    "30": [
+      "backend_package_dependencies_hnswlib_node",
+      "hnswlib_node"
+    ],
+    "31": [
+      "backend_package_dependencies_huggingface_inference",
+      "huggingface_inference"
+    ],
+    "32": [
+      "backend_package_dependencies_ioredis",
+      "ioredis"
+    ],
+    "33": [
+      "backend_package_dependencies_jsonwebtoken",
+      "jsonwebtoken"
+    ],
+    "34": [
+      "backend_package_dependencies_langchain",
+      "langchain"
+    ],
+    "35": [
+      "backend_package_dependencies_langchain_core",
+      "langchain_core"
+    ],
+    "36": [
+      "backend_package_dependencies_langchain_google_genai",
+      "langchain_google_genai"
+    ],
+    "37": [
+      "backend_package_dependencies_langchain_pinecone",
+      "langchain_pinecone"
+    ],
+    "38": [
+      "backend_package_dependencies_langsmith",
+      "langsmith"
+    ],
+    "39": [
+      "backend_package_dependencies_mongoose",
+      "mongoose"
+    ],
+    "40": [
+      "backend_package_dependencies_multer",
+      "multer"
+    ],
+    "41": [
+      "backend_package_dependencies_nodemailer",
+      "nodemailer"
+    ],
+    "42": [
+      "backend_package_dependencies_nodemon",
+      "nodemon"
+    ],
+    "43": [
+      "backend_package_dependencies_pdf_parse",
+      "pdf_parse"
+    ],
+    "44": [
+      "backend_package_dependencies_pinecone_database_pinecone",
+      "pinecone_database_pinecone"
+    ],
+    "45": [
+      "backend_package_dependencies_razorpay",
+      "razorpay"
+    ],
+    "46": [
+      "backend_package_dependencies_resend",
+      "resend"
+    ],
+    "47": [
+      "backend_package_dependencies_socket_io",
+      "socket_io"
+    ],
+    "48": [
+      "backend_package_dependencies_socket_io_client",
+      "backend_package_json_socket_io_client"
+    ],
+    "49": [
+      "backend_package_dependencies_xenova_transformers",
+      "xenova_transformers"
+    ],
+    "50": [
+      "backend_package_dependencies_zod",
+      "zod"
+    ],
+    "51": [
+      "backend_test_auth",
+      "backend_test_auth_testauth"
+    ],
+    "52": [
+      "frontend_eslint_config"
+    ],
+    "53": [
+      "frontend_vite_config"
+    ]
+  },
+  "cohesion": {
+    "0": 0.05110809588421529,
+    "1": 0.08852459016393442,
+    "2": 0.09042553191489362,
+    "3": 0.08266129032258064,
+    "4": 0.11827956989247312,
+    "5": 0.06451612903225806,
+    "6": 0.12615384615384614,
+    "7": 0.08,
+    "8": 0.16996047430830039,
+    "9": 0.1523809523809524,
+    "10": 0.1631578947368421,
+    "11": 0.16666666666666666,
+    "12": 0.2222222222222222,
+    "13": 0.26666666666666666,
+    "14": 0.2222222222222222,
+    "15": 0.25,
+    "16": 0.38095238095238093,
+    "17": 0.4,
+    "18": 0.6,
+    "19": 0.6666666666666666,
+    "20": 0.6666666666666666,
+    "21": 0.6666666666666666,
+    "22": 1.0,
+    "23": 1.0,
+    "24": 1.0,
+    "25": 1.0,
+    "26": 1.0,
+    "27": 1.0,
+    "28": 1.0,
+    "29": 1.0,
+    "30": 1.0,
+    "31": 1.0,
+    "32": 1.0,
+    "33": 1.0,
+    "34": 1.0,
+    "35": 1.0,
+    "36": 1.0,
+    "37": 1.0,
+    "38": 1.0,
+    "39": 1.0,
+    "40": 1.0,
+    "41": 1.0,
+    "42": 1.0,
+    "43": 1.0,
+    "44": 1.0,
+    "45": 1.0,
+    "46": 1.0,
+    "47": 1.0,
+    "48": 1.0,
+    "49": 1.0,
+    "50": 1.0,
+    "51": 1.0,
+    "52": 1.0,
+    "53": 1.0
+  },
+  "gods": [
+    {
+      "id": "frontend_src_context_appcontext_appcontext",
+      "label": "AppContext",
+      "degree": 22
+    },
+    {
+      "id": "backend_config_redis_connection",
+      "label": "connection",
+      "degree": 11
+    },
+    {
+      "id": "frontend_src_context_admin_admincontext_admincontext",
+      "label": "AdminContext",
+      "degree": 10
+    },
+    {
+      "id": "frontend_src_context_admin_doctorcontext_doctorcontext",
+      "label": "DoctorContext",
+      "degree": 10
+    },
+    {
+      "id": "frontend_src_features_rag_components_medicalchatbot_medicalchatbot",
+      "label": "MedicalChatBot()",
+      "degree": 10
+    },
+    {
+      "id": "frontend_src_features_rag_utils_doctorscoring_calculatedoctorscore",
+      "label": "calculateDoctorScore()",
+      "degree": 10
+    },
+    {
+      "id": "frontend_src_assets_assets_assets",
+      "label": "assets",
+      "degree": 9
+    },
+    {
+      "id": "frontend_src_features_rag_utils_doctorscoring_getscorebreakdown",
+      "label": "getScoreBreakdown()",
+      "degree": 9
+    },
+    {
+      "id": "backend_middlewares_auth_middleware_verifytoken",
+      "label": "verifyToken()",
+      "degree": 8
+    },
+    {
+      "id": "backend_controllers_labcontroller_analyzereport",
+      "label": "analyzeReport()",
+      "degree": 7
+    }
+  ],
+  "surprises": [
+    {
+      "source": "runTests()",
+      "target": "enqueueMedicalReport()",
+      "source_files": [
+        "backend/scripts/test-phase4.js",
+        "backend/workers/aiQueue.js"
+      ],
+      "confidence": "EXTRACTED",
+      "relation": "calls",
+      "why": "peripheral node `runTests()` unexpectedly reaches hub `enqueueMedicalReport()`"
+    },
+    {
+      "source": "seedDoctors()",
+      "target": "connectDB()",
+      "source_files": [
+        "backend/scripts/seedDoctors.js",
+        "backend/config/mongodb.js"
+      ],
+      "confidence": "EXTRACTED",
+      "relation": "calls",
+      "why": "cross-file semantic connection"
+    },
+    {
+      "source": "markAppointmentPaid()",
+      "target": "enqueueBookingSuccess()",
+      "source_files": [
+        "backend/controllers/adminController.js",
+        "backend/workers/bookingSuccessQueue.js"
+      ],
+      "confidence": "EXTRACTED",
+      "relation": "calls",
+      "why": "cross-file semantic connection"
+    },
+    {
+      "source": "markAppointmentPaid()",
+      "target": "enqueueEmail()",
+      "source_files": [
+        "backend/controllers/adminController.js",
+        "backend/workers/emailQueue.js"
+      ],
+      "confidence": "EXTRACTED",
+      "relation": "calls",
+      "why": "cross-file semantic connection"
+    },
+    {
+      "source": "analyzeBloodReport()",
+      "target": "enqueueMedicalReport()",
+      "source_files": [
+        "backend/controllers/aiController.js",
+        "backend/workers/aiQueue.js"
+      ],
+      "confidence": "EXTRACTED",
+      "relation": "calls",
+      "why": "cross-file semantic connection"
+    }
+  ],
+  "questions": [
+    {
+      "type": "bridge_node",
+      "question": "Why does `dependencies` connect `dependencies` to `backend/package.json`, `@langchain/community`, `bullmq`, `cloudinary`, `cookie-parser`, `cors`, `dotenv`, `express`, `@google/generative-ai`, `hnswlib-node`, `@huggingface/inference`, `ioredis`, `jsonwebtoken`, `langchain`, `@langchain/core`, `@langchain/google-genai`, `@langchain/pinecone`, `langsmith`, `mongoose`, `multer`, `nodemailer`, `nodemon`, `pdf-parse`, `@pinecone-database/pinecone`, `razorpay`, `resend`, `socket.io`, `socket.io-client`, `@xenova/transformers`, `zod`?",
+      "why": "High betweenness centrality (0.021) - this node is a cross-community bridge."
+    },
+    {
+      "type": "bridge_node",
+      "question": "Why does `connection` connect `adminRoute.js` to `server.js`, `labController.js`, `aiWorker.js`?",
+      "why": "High betweenness centrality (0.011) - this node is a cross-community bridge."
+    },
+    {
+      "type": "bridge_node",
+      "question": "Why does `AppContext` connect `App.jsx` to `index.js`, `AiDiagnostic.jsx`, `assets/assets.js`?",
+      "why": "High betweenness centrality (0.010) - this node is a cross-community bridge."
+    },
+    {
+      "type": "isolated_nodes",
+      "question": "What connects `extractorSchema`, `llm`, `llm` to the rest of the system?",
+      "why": "149 weakly-connected nodes found - possible documentation gaps or missing edges."
+    },
+    {
+      "type": "low_cohesion",
+      "question": "Should `server.js` be split into smaller, more focused modules?",
+      "why": "Cohesion score 0.05110809588421529 - nodes in this community are weakly interconnected."
+    },
+    {
+      "type": "low_cohesion",
+      "question": "Should `App.jsx` be split into smaller, more focused modules?",
+      "why": "Cohesion score 0.08852459016393442 - nodes in this community are weakly interconnected."
+    },
+    {
+      "type": "low_cohesion",
+      "question": "Should `index.js` be split into smaller, more focused modules?",
+      "why": "Cohesion score 0.09042553191489362 - nodes in this community are weakly interconnected."
+    }
+  ]
+}
