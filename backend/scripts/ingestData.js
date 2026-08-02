@@ -1,6 +1,6 @@
 import { PDFLoader } from "@langchain/community/document_loaders/fs/pdf";
-import { RecursiveCharacterTextSplitter } from "langchain/text_splitter";
-import { HuggingFaceTransformersEmbeddings } from "@langchain/community/embeddings/hf_transformers";
+import { RecursiveCharacterTextSplitter } from "@langchain/textsplitters";
+import { HuggingFaceTransformersEmbeddings } from "@langchain/community/embeddings/huggingface_transformers";
 import { Document } from "@langchain/core/documents";
 import { Pinecone } from "@pinecone-database/pinecone";
 import { PineconeStore } from "@langchain/pinecone";
@@ -15,11 +15,14 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const CONFIG = {
-    PDF_FOLDER: path.join(__dirname, "../data"),
+    PDF_FOLDERS: [
+        { path: path.join(__dirname, "../data"), ministry: "MoHFW" },
+        { path: path.join(__dirname, "../ICMR_DATA"), ministry: "ICMR" }
+    ],
     PINECONE_INDEX: "mediconnect",
     EMBEDDING_MODEL: "Xenova/all-mpnet-base-v2",
-    CHUNK_SIZE: 800,
-    CHUNK_OVERLAP: 150,
+    CHUNK_SIZE: 2000,
+    CHUNK_OVERLAP: 300,
     BATCH_SIZE: 100, 
     PINECONE_API_KEY: process.env.PINECONE_API_KEY,
 };
@@ -59,22 +62,32 @@ export const buildMedicalIndex = async () => {
 
         // Load PDFs
         console.log("[INFO] Loading source PDFs...");
-        if (!fs.existsSync(CONFIG.PDF_FOLDER)) {
-            throw new Error(`[FATAL] Data directory missing: ${CONFIG.PDF_FOLDER}`);
-        }
-
-        const pdfFiles = fs.readdirSync(CONFIG.PDF_FOLDER).filter(file => file.toLowerCase().endsWith('.pdf'));
         const rawDocs = [];
 
-        for (const pdfFile of pdfFiles) {
-            const filePath = path.join(CONFIG.PDF_FOLDER, pdfFile);
-            try {
-                const loader = new PDFLoader(filePath, { splitPages: true });
-                const docs = await loader.load();
-                rawDocs.push(...docs);
-                console.log(`[INFO] Loaded: ${pdfFile} (${docs.length} pages)`);
-            } catch (err) {
-                console.error(`[ERROR] Failed to load ${pdfFile}: ${err.message}`);
+        for (const folderConfig of CONFIG.PDF_FOLDERS) {
+            if (!fs.existsSync(folderConfig.path)) {
+                console.log(`[WARN] Data directory missing: ${folderConfig.path}`);
+                continue;
+            }
+
+            const pdfFiles = fs.readdirSync(folderConfig.path).filter(file => file.toLowerCase().endsWith('.pdf'));
+            
+            for (const pdfFile of pdfFiles) {
+                const filePath = path.join(folderConfig.path, pdfFile);
+                try {
+                    const loader = new PDFLoader(filePath, { splitPages: true });
+                    const docs = await loader.load();
+                    
+                    // Attach ministry metadata early for easier enrichment later
+                    docs.forEach(doc => {
+                        doc.metadata.ministry = folderConfig.ministry;
+                    });
+                    
+                    rawDocs.push(...docs);
+                    console.log(`[INFO] Loaded: ${pdfFile} (${docs.length} pages) from ${folderConfig.ministry}`);
+                } catch (err) {
+                    console.error(`[ERROR] Failed to load ${pdfFile}: ${err.message}`);
+                }
             }
         }
 
@@ -90,7 +103,7 @@ export const buildMedicalIndex = async () => {
                     category: classification.category,
                     domain: classification.domain,
                     condition: classification.condition,
-                    ministry: "ICMR/MoHFW",
+                    ministry: doc.metadata.ministry || "ICMR/MoHFW",
                     doc_type: "Standard Treatment Guidelines",
                 },
             });
@@ -101,6 +114,7 @@ export const buildMedicalIndex = async () => {
         const splitter = new RecursiveCharacterTextSplitter({
             chunkSize: CONFIG.CHUNK_SIZE,
             chunkOverlap: CONFIG.CHUNK_OVERLAP,
+            separators: ["\\n\\n", "\\n", ".", " ", ""],
         });
 
         const splitDocs = await splitter.splitDocuments(enrichedDocs);
