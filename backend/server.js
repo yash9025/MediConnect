@@ -21,16 +21,26 @@ import queueChatModel from "./models/queueChatModel.js";
 import "./workers/bookingWorker.js";
 import "./workers/paymentWorker.js";
 import "./workers/emailWorker.js";
+import { createAdapter } from "@socket.io/redis-adapter";
+import { redisPublisher, redisSubscriber } from "./config/pubsub.js";
+
 const PORT = process.env.PORT || 4000;
 
 const app = express();
 const httpServer = createServer(app);
 
+// Highly optimized Socket.IO configuration for 10k+ concurrent connections
 const io = new Server(httpServer, {
   cors: {
     origin: "*",
     methods: ["GET", "POST"],
   },
+  pingInterval: 25000,
+  pingTimeout: 60000,
+  maxHttpBufferSize: 1e6,
+  perMessageDeflate: false, // Disables CPU-heavy zlib compression for high-density WebSocket loads
+  transports: ["websocket", "polling"],
+  adapter: createAdapter(redisPublisher.duplicate(), redisSubscriber.duplicate()),
 });
 
 app.set("io", io);
@@ -75,7 +85,19 @@ app.get("/ping", (req, res) => {
   });
 });
 
-import { redisSubscriber } from "./config/pubsub.js";
+app.get("/api/ws-stats", (req, res) => {
+  const memoryUsage = process.memoryUsage();
+  res.status(200).json({
+    status: "healthy",
+    connectedClients: io.engine ? io.engine.clientsCount : 0,
+    memory: {
+      rssMb: Math.round(memoryUsage.rss / 1024 / 1024),
+      heapUsedMb: Math.round(memoryUsage.heapUsed / 1024 / 1024),
+      heapTotalMb: Math.round(memoryUsage.heapTotal / 1024 / 1024),
+    },
+    uptime: process.uptime(),
+  });
+});
 
 io.on("connection", (socket) => {
   // A client joins a room specific to their job ID
