@@ -1,0 +1,59 @@
+services:
+  # Fast local Redis container for pub/sub & queues under high load
+  redis-test:
+    image: redis:7-alpine
+    container_name: mediconnect-redis-test
+    command: redis-server --maxclients 20000 --save "" --appendonly no
+    ports:
+      - "6379:6379"
+    ulimits:
+      nofile:
+        soft: 65535
+        hard: 65535
+    networks:
+      - test-network
+
+  # MediConnect Backend Server under test
+  backend-test:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: mediconnect-backend-test
+    env_file:
+      - ./backend/.env
+    environment:
+      - PORT=4000
+      - REDIS_URL=redis://redis-test:6379
+      - NODE_ENV=development
+    ports:
+      - "4000:4000"
+    ulimits:
+      nofile:
+        soft: 65535
+        hard: 65535
+    depends_on:
+      - redis-test
+    networks:
+      - test-network
+
+  # k6 Load Testing Service for 10,000 WebSocket users
+  k6-test:
+    image: grafana/k6:latest
+    container_name: mediconnect-k6-test
+    volumes:
+      - ./k6-websocket-test.js:/scripts/test.js
+    command: run /scripts/test.js
+    environment:
+      - TARGET_URL=ws://backend-test:4000/socket.io/?EIO=4&transport=websocket
+    ulimits:
+      nofile:
+        soft: 65535
+        hard: 65535
+    depends_on:
+      - backend-test
+    networks:
+      - test-network
+
+networks:
+  test-network:
+    driver: bridge
