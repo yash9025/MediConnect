@@ -61,7 +61,7 @@ jobs:
         # --legacy-peer-deps is required due to zod v4 / @langchain/community peer conflict
         run: npm install --legacy-peer-deps
       - name: Check Server Syntax
-        run: node --input-type=module < server.js 2>/dev/null || node -e "import('./server.js').catch(()=>{})" || echo "Syntax check passed"
+        run: node --check server.js
 
   # 4. Deploy to Render (only if Build + Backend pass)
   deploy:
