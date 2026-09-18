@@ -24,7 +24,7 @@ const CONFIG = {
 };
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+const model = genAI.getGenerativeModel({ model: process.env.GEMINI_MODEL || "gemini-3.6-flash" });
 
 const embeddings = new HuggingFaceInferenceEmbeddings({
   apiKey: process.env.HF_API_KEY,
@@ -135,29 +135,34 @@ const retrieveMedicalContext = async (abnormalResults, userSymptoms) => {
     console.warn("[WARN] Redis cache error, proceeding without cache:", err.message);
   }
 
-  const vectorStore = await getVectorStore();
-  
-  console.log("[INFO] Searching Pinecone vector store (Cache MISS)...");
-  const results = await vectorStore.similaritySearchWithScore(expandedQuery, CONFIG.RAG_K);
-  
-  // Filter out low relevance matches to reduce noise
-  const filtered = results.filter(([_, score]) => score >= CONFIG.RAG_THRESHOLD);
-  const finalResults = filtered.length > 0 ? filtered.slice(0, 5) : results.slice(0, 3);
-
-  const formattedContexts = finalResults.map(([doc]) => ({
-    content: doc.pageContent,
-    source: path.basename(doc.metadata.source_file || "Guidelines").replace(".pdf", ""),
-    category: doc.metadata.category || "General Medicine"
-  }));
-
-  // Store in Redis with a 7-day TTL (604800 seconds)
   try {
-    await redisClient.set(cacheKey, JSON.stringify(formattedContexts), 'EX', 604800);
-  } catch (err) {
-    console.warn("[WARN] Failed to set Redis cache:", err.message);
-  }
+    const vectorStore = await getVectorStore();
+    
+    console.log("[INFO] Searching Pinecone vector store (Cache MISS)...");
+    const results = await vectorStore.similaritySearchWithScore(expandedQuery, CONFIG.RAG_K);
+    
+    // Filter out low relevance matches to reduce noise
+    const filtered = results.filter(([_, score]) => score >= CONFIG.RAG_THRESHOLD);
+    const finalResults = filtered.length > 0 ? filtered.slice(0, 5) : results.slice(0, 3);
 
-  return formattedContexts;
+    const formattedContexts = finalResults.map(([doc]) => ({
+      content: doc.pageContent,
+      source: path.basename(doc.metadata.source_file || "Guidelines").replace(".pdf", ""),
+      category: doc.metadata.category || "General Medicine"
+    }));
+
+    // Store in Redis with a 7-day TTL (604800 seconds)
+    try {
+      await redisClient.set(cacheKey, JSON.stringify(formattedContexts), 'EX', 604800);
+    } catch (err) {
+      console.warn("[WARN] Failed to set Redis cache:", err.message);
+    }
+
+    return formattedContexts;
+  } catch (vectorErr) {
+    console.warn("[WARN] Vector search failed, proceeding without RAG context:", vectorErr.message);
+    return [];
+  }
 };
 
 const generateDiagnosis = traceable(async (abnormalResults, symptoms, contexts, availableSpecialties) => {
