@@ -19,7 +19,7 @@ const synthesizerSchema = z.object({
 });
 
 const llm = new ChatGoogleGenerativeAI({
-  model: "gemini-2.5-flash",
+  model: process.env.GEMINI_MODEL || "gemini-3.6-flash",
   temperature: 0,
   maxOutputTokens: 2048,
   apiKey: process.env.GEMINI_API_KEY,

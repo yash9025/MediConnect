@@ -1,6 +1,6 @@
 # MediConnect — Low Level Architecture Explanation
 
-> **Diagram file:** [LLD_Architecture.html](file:///C:/Users/YASH/.gemini/antigravity-ide/brain/0ca66a33-0852-484b-952d-fec07df811b1/LLD_Architecture.html) — open in any browser, drag to pan, Ctrl+Wheel or +/- to zoom.
+> **Diagram file:** [LLD_Architecture.html](file:///C:/Users/YASH/.gemini/antigravity-ide/brain/e2c80953-99e4-4e34-aeb8-6a29f7e95742/LLD_Architecture.html) — open in any browser, drag to pan, Ctrl+Wheel or +/- to zoom.
 
 ---
 
