@@ -139,6 +139,7 @@ const AiDiagnostic = () => {
   const [inputMode, setInputMode] = useState("text");
   const [rawText, setRawText]     = useState("");
   const [pdfFile, setPdfFile]     = useState(null);
+  const [pdfPreviewUrl, setPdfPreviewUrl] = useState(null);
   const fileInputRef              = useRef(null);
 
   // Execution
@@ -160,8 +161,17 @@ const AiDiagnostic = () => {
 
   const handleFileChange = (e) => {
     const file = e.target.files[0];
-    if (file && file.type === "application/pdf") { setPdfFile(file); }
-    else { toast.error("Please upload a valid PDF file."); setPdfFile(null); }
+    if (file && file.type === "application/pdf") { 
+      setPdfFile(file); 
+      if (pdfPreviewUrl) URL.revokeObjectURL(pdfPreviewUrl);
+      setPdfPreviewUrl(URL.createObjectURL(file));
+    }
+    else { 
+      toast.error("Please upload a valid PDF file."); 
+      setPdfFile(null); 
+      if (pdfPreviewUrl) URL.revokeObjectURL(pdfPreviewUrl);
+      setPdfPreviewUrl(null);
+    }
   };
 
   // V1 call
@@ -361,24 +371,44 @@ const AiDiagnostic = () => {
           {inputMode === "pdf" && (
             <>
               <div
-                onClick={() => fileInputRef.current?.click()}
-                className={`w-full border-2 border-dashed rounded-lg p-10 text-center cursor-pointer transition-all duration-200 ${
+                onClick={() => !pdfFile && fileInputRef.current?.click()}
+                className={`w-full relative rounded-xl text-center overflow-hidden transition-all duration-300 ${
                   pdfFile
-                    ? "border-green-400 bg-green-50"
-                    : "border-gray-300 bg-gray-50 hover:border-blue-400 hover:bg-blue-50"
+                    ? "border-0 shadow-lg bg-white ring-1 ring-gray-200 h-[450px]"
+                    : "border-2 border-dashed border-gray-300 bg-gray-50 hover:border-blue-400 hover:bg-blue-50 p-10 cursor-pointer"
                 }`}
               >
                 {pdfFile ? (
-                  <>
-                    <p className="text-3xl mb-2">✅</p>
-                    <p className="font-semibold text-green-700 text-sm">{pdfFile.name}</p>
-                    <p className="text-xs text-green-600 mt-1">{(pdfFile.size / 1024).toFixed(1)} KB · Click to change</p>
-                  </>
+                  <div className="w-full h-full relative group flex flex-col">
+                    <div className="bg-gray-100 px-4 py-2 flex items-center justify-between border-b border-gray-200 shrink-0">
+                      <div className="flex items-center gap-2 truncate">
+                        <span className="text-xl">📄</span>
+                        <span className="font-semibold text-gray-700 text-sm truncate">{pdfFile.name}</span>
+                        <span className="text-xs text-gray-500 font-medium">({(pdfFile.size / 1024 / 1024).toFixed(2)} MB)</span>
+                      </div>
+                      <button 
+                        onClick={(e) => { e.stopPropagation(); fileInputRef.current?.click(); }}
+                        className="text-xs font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-full transition-colors cursor-pointer shrink-0"
+                      >
+                        Change File
+                      </button>
+                    </div>
+                    <object
+                      data={`${pdfPreviewUrl}#toolbar=0&navpanes=0&scrollbar=0`}
+                      type="application/pdf"
+                      className="w-full flex-1"
+                    >
+                      <div className="flex items-center justify-center h-full text-gray-500 flex-col gap-2">
+                        <span className="text-4xl">📄</span>
+                        <p>Preview not available in this browser.</p>
+                      </div>
+                    </object>
+                  </div>
                 ) : (
                   <>
-                    <p className="text-4xl text-gray-300 mb-2">📄</p>
+                    <p className="text-4xl text-gray-300 mb-2 mt-4">📄</p>
                     <p className="font-semibold text-gray-500 text-sm">Click to upload your blood report PDF</p>
-                    <p className="text-xs text-gray-400 mt-1">Max 10MB · Blood test reports only</p>
+                    <p className="text-xs text-gray-400 mt-1 mb-4">Max 10MB · Blood test reports only</p>
                   </>
                 )}
               </div>

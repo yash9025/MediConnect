@@ -25,6 +25,32 @@ const CONFIG = {
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 const model = genAI.getGenerativeModel({ model: process.env.GEMINI_MODEL || "gemini-3.6-flash" });
+const fallbackModel = genAI.getGenerativeModel({ model: "gemini-3.5-flash" });
+
+// Helper to retry Gemini API calls on 503 / 429 errors
+const generateWithRetry = async (promptOrConfig, maxRetries = 3) => {
+  let lastError;
+  for (let i = 0; i < maxRetries; i++) {
+    try {
+      // Try the primary model
+      return await model.generateContent(promptOrConfig);
+    } catch (error) {
+      lastError = error;
+      const isRetryable = error?.status === 503 || error?.status === 429;
+      if (isRetryable) {
+        console.warn(`[WARN] Gemini API overloaded (${error.status}). Retrying ${i + 1}/${maxRetries} in ${2000 * (i + 1)}ms...`);
+        await new Promise(res => setTimeout(res, 2000 * (i + 1))); // Exponential backoff
+        if (i === maxRetries - 1 && error?.status === 503) {
+            console.warn(`[WARN] Falling back to gemini-1.5-flash...`);
+            return await fallbackModel.generateContent(promptOrConfig);
+        }
+      } else {
+        throw error; // Not a rate limit / 503, fail immediately
+      }
+    }
+  }
+  throw lastError;
+};
 
 const embeddings = new HuggingFaceInferenceEmbeddings({
   apiKey: process.env.HF_API_KEY,
@@ -79,7 +105,7 @@ const processPdf = traceable(async (filePath) => {
     required: ["test_results"],
   };
 
-  const result = await model.generateContent({
+  const result = await generateWithRetry({
     contents: [{
       role: "user",
       parts: [
@@ -106,7 +132,7 @@ const expandQueryWithLLM = async (abnormalResults, userSymptoms) => {
   const prompt = `Generate a short medical search query (max 50 words) for these lab results: ${testSummary}. ${userSymptoms ? `Symptoms: ${userSymptoms}` : ''}. Return ONLY the query.`;
 
   try {
-    const result = await model.generateContent(prompt);
+    const result = await generateWithRetry(prompt);
     return result.response.text().trim();
   } catch (error) {
     console.warn("[WARN] Query expansion failed, using fallback.");
@@ -189,7 +215,7 @@ const generateDiagnosis = traceable(async (abnormalResults, symptoms, contexts, 
     }
   `;
 
-  const result = await model.generateContent({
+  const result = await generateWithRetry({
     contents: [{ role: "user", parts: [{ text: prompt }] }],
     generationConfig: { responseMimeType: "application/json" },
   });
