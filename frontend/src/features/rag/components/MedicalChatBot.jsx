@@ -39,6 +39,7 @@ const useMedicalChat = () => {
     file: null,
     showResetModal: false,
     isDeleting: false,
+    selectedEngine: "v1", // 'v1' ($1.00 Fast RAG) or 'v2' ($2.00 Multi-Agent)
   });
 
   const chatEndRef = useRef(null);
@@ -48,6 +49,10 @@ const useMedicalChat = () => {
   const updateState = useCallback((updates) => {
     setState((prev) => ({ ...prev, ...updates }));
   }, []);
+
+  const setEngine = useCallback((engine) => {
+    updateState({ selectedEngine: engine });
+  }, [updateState]);
 
   // 1. Auto-scroll to bottom
   useEffect(() => {
@@ -185,7 +190,7 @@ const useMedicalChat = () => {
 
   // 5. Main Send Logic
   const sendMessage = useCallback(async () => {
-    const { input, file } = state;
+    const { input, file, selectedEngine } = state;
     if (!input.trim() && !file) return;
 
     // Optimistic Update
@@ -201,34 +206,100 @@ const useMedicalChat = () => {
     saveMessageToDb(userMsg);
 
     try {
-      const formData = new FormData();
-      if (input) formData.append("user_context", input);
-      if (file) formData.append("pdf", file);
-
-      const { data } = await axios.post(
-        `${backendUrl}${CONFIG.ENDPOINTS.ANALYZE}`,
-        formData,
-        { headers: { "Content-Type": "multipart/form-data", token } }
-      );
-
-      const botMsg = data.analysis
-        ? { type: "bot", isReport: true, data }
-        : {
-            type: "bot",
-            text:
-              data.message || "I processed that but found no specific results.",
+      if (selectedEngine === "v2") {
+        // V2 Multi-Agent SSE Stream
+        let fetchOpts = {};
+        if (file) {
+          const formData = new FormData();
+          formData.append("pdf", file);
+          formData.append("executionMode", "v2");
+          fetchOpts = {
+            method: "POST",
+            headers: { Accept: "text/event-stream", token },
+            credentials: "include",
+            body: formData,
           };
+        } else {
+          fetchOpts = {
+            method: "POST",
+            headers: { "Content-Type": "application/json", Accept: "text/event-stream", token },
+            credentials: "include",
+            body: JSON.stringify({ rawPdfText: input, executionMode: "v2" }),
+          };
+        }
 
-      setState((prev) => ({
-        ...prev,
-        messages: [...prev.messages, botMsg],
-        isLoading: false,
-      }));
-      saveMessageToDb(botMsg);
+        const res = await fetch(`${backendUrl}/api/agent/v2/stream`, fetchOpts);
+        if (!res.ok) throw new Error("V2 multi-agent stream failed");
+
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = "";
+        let finalAnalysis = null;
+
+        while (true) {
+          const { value, done } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+          const parts = buffer.split("\n\n");
+          buffer = parts.pop();
+          for (const part of parts) {
+            if (!part.trim()) continue;
+            const lines = part.split("\n").map(l => l.trim()).filter(Boolean);
+            let evType = "log", dataStr = null;
+            for (const line of lines) {
+              if (line.startsWith("event: ")) evType = line.slice(7).trim();
+              else if (line.startsWith("data: ")) dataStr = line.slice(6).trim();
+            }
+            if (dataStr && evType === "result") {
+              try {
+                const parsed = JSON.parse(dataStr);
+                finalAnalysis = parsed.analysis;
+              } catch (e) {}
+            }
+          }
+        }
+
+        const botMsg = finalAnalysis
+          ? { type: "bot", isReport: true, data: { analysis: finalAnalysis, rag_sources: [{ source: "Deep Agentic Research Pipeline (V2 SOTA)" }] } }
+          : { type: "bot", text: "Multi-agent deep research complete." };
+
+        setState((prev) => ({
+          ...prev,
+          messages: [...prev.messages, botMsg],
+          isLoading: false,
+        }));
+        saveMessageToDb(botMsg);
+      } else {
+        // V1 Standard RAG Endpoint
+        const formData = new FormData();
+        if (input) formData.append("user_context", input);
+        if (file) formData.append("pdf", file);
+
+        const { data } = await axios.post(
+          `${backendUrl}${CONFIG.ENDPOINTS.ANALYZE}`,
+          formData,
+          { headers: { "Content-Type": "multipart/form-data", token } }
+        );
+
+        const botMsg = data.analysis
+          ? { type: "bot", isReport: true, data }
+          : {
+              type: "bot",
+              text:
+                data.message || "I processed that but found no specific results.",
+            };
+
+        setState((prev) => ({
+          ...prev,
+          messages: [...prev.messages, botMsg],
+          isLoading: false,
+        }));
+        saveMessageToDb(botMsg);
+      }
     } catch (error) {
       console.error("Analysis Error:", error);
       const errorText =
-        error.response?.data?.message || "Connection failed. Please try again.";
+        error.response?.data?.message || error.message || "Connection failed. Please try again.";
       setState((prev) => ({
         ...prev,
         messages: [
@@ -243,6 +314,7 @@ const useMedicalChat = () => {
   return {
     ...state,
     setInput,
+    setEngine,
     toggleChat,
     showResetConfirm,
     hideResetConfirm,
@@ -257,7 +329,7 @@ const useMedicalChat = () => {
 
 // --- PRESENTATIONAL COMPONENTS (Memoized) ---
 
-const ChatTrigger = React.memo(({ isOpen, onClick }) => (
+const ChatTrigger = React.memo(({ isOpen, onClick, selectedEngine }) => (
   <div className="fixed bottom-8 right-8 z-[9990]">
     <button
       onClick={onClick}
@@ -293,20 +365,20 @@ const ChatTrigger = React.memo(({ isOpen, onClick }) => (
           {isOpen ? "Close" : "Analyze Report"}
         </span>
       </div>
-      {/* V1 Pipeline Badge */}
-      <span className="absolute -top-3 -left-2 flex items-center gap-1.5 bg-white text-emerald-700 text-[9px] font-extrabold px-2 py-0.5 rounded-full shadow-md border border-emerald-200 tracking-wide">
+      {/* Dynamic Engine Badge */}
+      <span className="absolute -top-3 -left-2 flex items-center gap-1.5 bg-white text-slate-800 text-[9px] font-extrabold px-2 py-0.5 rounded-full shadow-md border border-slate-200 tracking-wide">
         <span className="relative flex h-1.5 w-1.5">
-          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-500 opacity-75"></span>
-          <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-600"></span>
+          <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${selectedEngine === 'v2' ? 'bg-blue-500' : 'bg-emerald-500'}`}></span>
+          <span className={`relative inline-flex rounded-full h-1.5 w-1.5 ${selectedEngine === 'v2' ? 'bg-blue-600' : 'bg-emerald-600'}`}></span>
         </span>
-        V1 · RAG Pipeline
+        {selectedEngine === 'v2' ? 'V2 · Multi-Agent ($2.00)' : 'V1 · Fast RAG ($1.00)'}
       </span>
     </button>
   </div>
 ));
 
-const ChatHeader = React.memo(({ onReset }) => (
-  <header className="bg-gradient-to-r from-slate-900 to-slate-800 p-5 text-white flex justify-between items-center shadow-md z-10 shrink-0">
+const ChatHeader = React.memo(({ onReset, selectedEngine, onSelectEngine }) => (
+  <header className="bg-gradient-to-r from-slate-900 to-slate-800 p-4 text-white flex justify-between items-center shadow-md z-10 shrink-0">
     <div className="flex items-center gap-3">
       <div className="bg-emerald-500/20 p-2 rounded-lg border border-emerald-500/30">
         <svg
@@ -323,16 +395,43 @@ const ChatHeader = React.memo(({ onReset }) => (
         </svg>
       </div>
       <div>
-        <h3 className="font-bold text-lg">LabLens Assistant</h3>
-        <p className="text-xs text-slate-400 flex items-center gap-1.5">
+        <h3 className="font-bold text-base">LabLens Assistant</h3>
+        <p className="text-[11px] text-slate-400 flex items-center gap-1.5">
           <span className="relative flex h-1.5 w-1.5">
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
             <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500"></span>
           </span>
-          Online & Ready
+          PDF & Text Ready
         </p>
       </div>
     </div>
+
+    {/* Engine Mode Toggle Switch */}
+    <div className="flex items-center bg-slate-800/80 p-1 rounded-lg border border-slate-700 text-xs">
+      <button
+        onClick={() => onSelectEngine("v1")}
+        className={`cursor-pointer px-2.5 py-1 rounded-md font-bold transition-all ${
+          selectedEngine === "v1"
+            ? "bg-emerald-500 text-white shadow-sm"
+            : "text-slate-400 hover:text-white"
+        }`}
+        title="Fast RAG Pipeline ($1.00 / 1 Credit)"
+      >
+        V1 ($1.00)
+      </button>
+      <button
+        onClick={() => onSelectEngine("v2")}
+        className={`cursor-pointer px-2.5 py-1 rounded-md font-bold transition-all ${
+          selectedEngine === "v2"
+            ? "bg-blue-600 text-white shadow-sm"
+            : "text-slate-400 hover:text-white"
+        }`}
+        title="Deep Multi-Agent Research ($2.00 / 2 Credits)"
+      >
+        V2 ($2.00)
+      </button>
+    </div>
+
     <button
       onClick={onReset}
       className="cursor-pointer text-slate-400 hover:text-white transition-colors p-2 rounded-md hover:bg-white/10 group"
@@ -693,7 +792,7 @@ const MedicalChatBot = () => {
 
   return (
     <>
-      <ChatTrigger isOpen={chat.isOpen} onClick={chat.toggleChat} />
+      <ChatTrigger isOpen={chat.isOpen} onClick={chat.toggleChat} selectedEngine={chat.selectedEngine} />
 
       {/* Reset Confirmation Modal */}
       <ResetConfirmModal
@@ -705,7 +804,7 @@ const MedicalChatBot = () => {
 
       {chat.isOpen && (
         <div className="fixed bottom-28 right-4 md:right-8 w-[calc(100vw-2rem)] md:w-[600px] lg:w-[700px] h-[700px] max-h-[85vh] bg-white rounded-2xl shadow-2xl border border-slate-200 flex flex-col z-[9999] overflow-hidden animate-in slide-in-from-bottom-5 fade-in duration-200 ring-1 ring-black/5">
-          <ChatHeader onReset={chat.showResetConfirm} />
+          <ChatHeader onReset={chat.showResetConfirm} selectedEngine={chat.selectedEngine} onSelectEngine={chat.setEngine} />
 
           <MessageList
             messages={chat.messages}

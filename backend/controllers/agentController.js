@@ -1,6 +1,14 @@
 import { medicalGraph } from "../agents/medicalGraph.js";
 import { analyzeReport } from "./labController.js";
 import { v4 as uuidv4 } from "uuid";
+import { GoogleGenerativeAI } from "@google/generative-ai";
+import fs from "fs";
+import * as dotenv from "dotenv";
+
+dotenv.config();
+
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+const geminiModel = genAI.getGenerativeModel({ model: process.env.GEMINI_MODEL || "gemini-3.6-flash" });
 
 // Helper to emit an SSE event on the response object
 const emit = (res, event, data) => {
@@ -9,11 +17,11 @@ const emit = (res, event, data) => {
 
 /**
  * POST /api/agent/v2/stream
- * Accepts rawPdfText + executionMode from the body.
+ * Accepts rawPdfText OR PDF file upload + executionMode from body/multipart.
  * Streams agent progress via Server-Sent Events.
  */
 export const streamAgentAnalysis = async (req, res) => {
-  const { rawPdfText, executionMode = "v2" } = req.body;
+  let { rawPdfText, executionMode = "v2" } = req.body;
 
   // ── SSE handshake ──────────────────────────────────────────────────
   res.setHeader("Content-Type", "text/event-stream");
@@ -22,10 +30,32 @@ export const streamAgentAnalysis = async (req, res) => {
   res.setHeader("X-Accel-Buffering", "no"); // Disable nginx buffering
   res.flushHeaders();
 
+  // Handle direct PDF file upload if present via Multer
+  if (req.file) {
+    emit(res, "log", { agent: "Extractor Agent", message: `Uploaded PDF detected: ${req.file.originalname}. Extracting report data...` });
+    try {
+      const pdfBuffer = await fs.promises.readFile(req.file.path);
+      const extractionResult = await geminiModel.generateContent([
+        { inlineData: { data: pdfBuffer.toString("base64"), mimeType: "application/pdf" } },
+        { text: "Extract all clinical test values, biomarker names, patient findings, and reference ranges into plain text for medical multi-agent analysis." }
+      ]);
+      rawPdfText = extractionResult.response.text();
+      emit(res, "log", { agent: "Extractor Agent", message: "PDF document extracted successfully! Feeding into Multi-Agent Graph..." });
+    } catch (pdfErr) {
+      console.error("[SSE] PDF extraction error:", pdfErr);
+      emit(res, "error", { agent: "Extractor Agent", message: `PDF extraction failed: ${pdfErr.message}` });
+      return res.end();
+    } finally {
+      // Clean up temp file safely
+      fs.promises.unlink(req.file.path).catch(() => {});
+    }
+  }
+
   if (!rawPdfText?.trim()) {
-    emit(res, "error", { message: "No report text provided." });
+    emit(res, "error", { message: "No report text or PDF file provided." });
     return res.end();
   }
+
 
   try {
     // ── V1 Branch ─────────────────────────────────────────────────────

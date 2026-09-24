@@ -8,7 +8,7 @@ import dotenv from "dotenv";
 dotenv.config();
 
 const llm = new ChatGoogleGenerativeAI({
-  model: process.env.GEMINI_MODEL || "gemini-3.6-flash",
+  model: process.env.GEMINI_MODEL || "gemini-2.0-flash",
   temperature: 0.1,
   maxOutputTokens: 1024,
   apiKey: process.env.GEMINI_API_KEY,

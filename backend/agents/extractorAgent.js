@@ -16,9 +16,16 @@ const extractorSchema = z.object({
   })).describe("List of biomarkers extracted. Only focus on ones that are present in the report.")
 });
 
-// Initialize Gemini with structured output
-const llm = new ChatGoogleGenerativeAI({
+// Initialize primary & fallback LLMs for extraction
+const primaryLlm = new ChatGoogleGenerativeAI({
   model: process.env.GEMINI_MODEL || "gemini-3.6-flash",
+  temperature: 0,
+  maxOutputTokens: 2048,
+  apiKey: process.env.GEMINI_API_KEY,
+}).withStructuredOutput(extractorSchema);
+
+const fallbackLlm = new ChatGoogleGenerativeAI({
+  model: "gemini-3.5-flash",
   temperature: 0,
   maxOutputTokens: 2048,
   apiKey: process.env.GEMINI_API_KEY,
@@ -40,14 +47,22 @@ export async function runExtractor(state) {
 CRITICAL INSTRUCTION: You MUST act as an anonymized data extractor. Strip away and ignore all Personally Identifiable Information (PII) such as patient names, ages, phone numbers, genders, addresses, and hospital names. Extract ONLY the structured biomarker values.
 If the document is clearly not a blood report (e.g. a grocery receipt, a random photo, blank text), set isValidBloodReport to false.`;
 
+  let response;
   try {
-    const response = await llm.invoke([
-      new SystemMessage(systemPrompt),
-      new HumanMessage(`Document Text:\n${state.rawPdfText}`)
-    ]);
+    try {
+      response = await primaryLlm.invoke([
+        new SystemMessage(systemPrompt),
+        new HumanMessage(`Document Text:\n${state.rawPdfText}`)
+      ]);
+    } catch (err) {
+      console.warn("[WARN] Primary extractor LLM failed, using fallback gemini-1.5-flash:", err?.message);
+      response = await fallbackLlm.invoke([
+        new SystemMessage(systemPrompt),
+        new HumanMessage(`Document Text:\n${state.rawPdfText}`)
+      ]);
+    }
 
     console.log("==> Extractor Agent: Finished extraction.");
-    // Return the fields to update the GraphState
     return {
       isValidBloodReport: response.isValidBloodReport,
       rejectionReason: response.rejectionReason || "",

@@ -12,33 +12,45 @@ import { MedicalChatBot } from "../features/rag";
 const MODES = [
   {
     id: "v1",
-    label: "Standard AI",
-    tag: "V1",
-    tagColor: "bg-green-100 text-green-700 border-green-200",
-    description: "Fast single-pipeline RAG analysis with Redis caching",
-    activeRing: "ring-green-500",
-    activeBg: "bg-green-50",
-    activeBorder: "border-green-400",
+    label: "Standard AI RAG",
+    tag: "V1 FAST",
+    price: "$1.00",
+    costCredit: "1 Credit",
+    speed: "~2-3 sec",
+    tagColor: "bg-emerald-100 text-emerald-800 border-emerald-300",
+    description: "Fast single-pipeline RAG search with Redis semantic caching.",
+    advantages: ["Ultra-fast response (~2-3s)", "Low token cost ($1.00)", "Ideal for routine PDF checks"],
+    activeRing: "ring-emerald-500",
+    activeBg: "bg-emerald-50/70",
+    activeBorder: "border-emerald-500",
   },
   {
     id: "v2",
-    label: "Deep Agentic Research",
-    tag: "V2",
-    tagColor: "bg-blue-100 text-blue-700 border-blue-200",
-    description: "Parallel multi-agent specialists with live research streaming",
+    label: "Deep Multi-Agent",
+    tag: "V2 SOTA",
+    price: "$2.00",
+    costCredit: "2 Credits",
+    speed: "~8-15 sec",
+    tagColor: "bg-blue-100 text-blue-800 border-blue-300",
+    description: "Parallel domain specialist agents (Cardiology, Nephrology) with live SSE reasoning & validation.",
+    advantages: ["Parallel specialist agents", "Live SSE reasoning stream", "Self-correcting validation", "Supports PDF & text"],
     activeRing: "ring-blue-500",
-    activeBg: "bg-blue-50",
-    activeBorder: "border-blue-400",
+    activeBg: "bg-blue-50/70",
+    activeBorder: "border-blue-500",
   },
   {
     id: "auto",
-    label: "Auto-Cascade",
-    tag: "SMART",
-    tagColor: "bg-orange-100 text-orange-700 border-orange-200",
-    description: "V1 first — auto-escalates to V2 for complex reports",
-    activeRing: "ring-orange-500",
-    activeBg: "bg-orange-50",
-    activeBorder: "border-orange-400",
+    label: "Smart Cascade",
+    tag: "AUTO SMART",
+    price: "Dynamic",
+    costCredit: "1-2 Credits",
+    speed: "Adaptive",
+    tagColor: "bg-purple-100 text-purple-800 border-purple-300",
+    description: "Fast V1 scan first — auto-escalates to V2 if complex report anomalies are detected.",
+    advantages: ["Speed & cost optimized", "Seamless escalation", "Recommended for general use"],
+    activeRing: "ring-purple-500",
+    activeBg: "bg-purple-50/70",
+    activeBorder: "border-purple-500",
     recommended: true,
   },
 ];
@@ -189,24 +201,36 @@ const AiDiagnostic = () => {
     return data;
   }, [backendUrl, rawText, pdfFile, inputMode]);
 
-  // V2 SSE stream
+  // V2 SSE stream (handles raw text OR multipart PDF)
   const runSSE = useCallback((execMode) => {
     return new Promise((resolve, reject) => {
-      setStreaming(true); setSseLogs([]); setSseReport(null);
+      setStreaming(true); setSseLogs([]); setV1Result(null);
       const ctrl = new AbortController();
       abortRef.current = ctrl;
 
-      const textPayload = inputMode === "pdf" && pdfFile
-        ? `[PDF: ${pdfFile.name}] — PDF upload uses Standard AI.`
-        : rawText;
+      let fetchOpts = {};
+      if (inputMode === "pdf" && pdfFile) {
+        const formData = new FormData();
+        formData.append("pdf", pdfFile);
+        formData.append("executionMode", execMode);
+        fetchOpts = {
+          method: "POST",
+          headers: { Accept: "text/event-stream" },
+          credentials: "include",
+          body: formData,
+          signal: ctrl.signal,
+        };
+      } else {
+        fetchOpts = {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Accept: "text/event-stream" },
+          credentials: "include",
+          body: JSON.stringify({ rawPdfText: rawText, executionMode: execMode }),
+          signal: ctrl.signal,
+        };
+      }
 
-      fetch(`${backendUrl}/api/agent/v2/stream`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Accept: "text/event-stream" },
-        credentials: "include",
-        body: JSON.stringify({ rawPdfText: textPayload, executionMode: execMode }),
-        signal: ctrl.signal,
-      })
+      fetch(`${backendUrl}/api/agent/v2/stream`, fetchOpts)
         .then(async (res) => {
           if (!res.ok) throw new Error((await res.json().catch(() => ({}))).message || "Stream failed");
           const reader = res.body.getReader();
@@ -225,7 +249,7 @@ const AiDiagnostic = () => {
               const p = JSON.parse(dataStr);
               if (evType === "log")      addLog(p.agent || "System", p.message, "log");
               else if (evType === "result") { 
-                setV1Result({ success: true, analysis: p.analysis, rag_sources: [{ source: "Deep Agentic Research Pipeline" }] }); 
+                setV1Result({ success: true, analysis: p.analysis, rag_sources: [{ source: "Deep Agentic Research Pipeline (V2)" }] }); 
                 addLog(p.agent || "Synthesizer Agent", p.message, "success"); 
               }
               else if (evType === "complete") resolve({ mode: "v1" });
@@ -258,16 +282,11 @@ const AiDiagnostic = () => {
     if (inputMode === "pdf" && !pdfFile)         { toast.error("Please upload a PDF file.");           return; }
     if (!isAuthenticated)                         { toast.error("You must be logged in.");              return; }
 
-    if (inputMode === "pdf" && mode === "v2") {
-      toast.info("PDF uploads use Standard AI. Switching to V1.");
-      setMode("v1");
-    }
-
     setLoading(true);
     reset();
 
     try {
-      if (mode === "v1" || inputMode === "pdf") {
+      if (mode === "v1") {
         addLog("System", "Starting Standard AI analysis (V1)...");
         addLog("Gemini", inputMode === "pdf" ? "Extracting data from PDF report..." : "Processing report text...");
         addLog("Cache", "Checking Redis semantic cache...");
@@ -280,6 +299,7 @@ const AiDiagnostic = () => {
       } else if (mode === "v2") {
         await runSSE("v2");
       } else {
+        // Auto Cascade mode
         const result = await runSSE("auto");
         if (result?.mode === "v1") {
           addLog("System", "Auto-Cascade: escalating to deep research...");
@@ -300,15 +320,15 @@ const AiDiagnostic = () => {
 
   return (
     <div className="bg-gray-50 min-h-screen py-12">
-      <div className="max-w-3xl mx-auto px-4">
+      <div className="max-w-4xl mx-auto px-4">
 
         {/* ── Header ── */}
         <div className="text-center mb-10">
-          <h1 className="text-4xl font-extrabold text-gray-900">
-            AI <span className="text-blue-600">Diagnostics</span>
+          <h1 className="text-4xl font-extrabold text-gray-900 tracking-tight">
+            AI <span className="bg-gradient-to-r from-blue-600 to-teal-500 bg-clip-text text-transparent">Diagnostics</span>
           </h1>
-          <p className="text-lg text-gray-600 mt-3">
-            Upload your blood report or paste the text. Powered by ICMR & MoHFW clinical guidelines.
+          <p className="text-base text-gray-600 mt-2 max-w-xl mx-auto">
+            Upload your lab report (PDF) or paste clinical findings. Choose between fast RAG search or deep multi-agent research.
           </p>
         </div>
         {!isAuthenticated ? (
@@ -328,7 +348,7 @@ const AiDiagnostic = () => {
         ) : (
           <>
         {/* ── Input Card ── */}
-        <div className="bg-white rounded-lg shadow-lg p-6 mb-6 border border-gray-100">
+        <div className="bg-white rounded-xl shadow-lg p-6 mb-6 border border-gray-100">
 
           {/* Input toggle */}
           <div className="flex gap-3 mb-5">
@@ -340,7 +360,7 @@ const AiDiagnostic = () => {
                   : "border-gray-200 text-gray-500 hover:border-gray-300 hover:bg-gray-50"
               }`}
             >
-              Paste Text
+              Paste Report Text
             </button>
             <button
               onClick={() => setInputMode("pdf")}
@@ -350,7 +370,7 @@ const AiDiagnostic = () => {
                   : "border-gray-200 text-gray-500 hover:border-gray-300 hover:bg-gray-50"
               }`}
             >
-              Upload PDF
+              Upload PDF Report
             </button>
           </div>
 
@@ -407,8 +427,8 @@ const AiDiagnostic = () => {
                 ) : (
                   <>
                     <p className="text-4xl text-gray-300 mb-2 mt-4">📄</p>
-                    <p className="font-semibold text-gray-500 text-sm">Click to upload your blood report PDF</p>
-                    <p className="text-xs text-gray-400 mt-1 mb-4">Max 10MB · Blood test reports only</p>
+                    <p className="font-semibold text-gray-700 text-sm">Click to upload your blood report PDF</p>
+                    <p className="text-xs text-gray-400 mt-1 mb-4">Max 10MB · Fully supported in both V1 Standard RAG & V2 Multi-Agent</p>
                   </>
                 )}
               </div>
@@ -420,53 +440,71 @@ const AiDiagnostic = () => {
                 className="hidden"
                 disabled={isRunning}
               />
-              {inputMode === "pdf" && (
-                <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mt-3">
-                  PDF upload uses Standard AI (V1). For multi-agent deep research, paste the report text.
-                </p>
-              )}
             </>
           )}
         </div>
 
-        {/* ── Analysis Mode ── */}
-        <div className="bg-white rounded-lg shadow-lg p-6 mb-6 border border-gray-100">
-          <h3 className="text-sm font-bold text-gray-800 mb-4">Select Analysis Mode</h3>
-          <div className="flex flex-col sm:flex-row gap-3">
+        {/* ── Analysis Mode Comparison ── */}
+        <div className="bg-white rounded-xl shadow-lg p-6 mb-6 border border-gray-100">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h3 className="text-base font-extrabold text-gray-800">Choose AI Pipeline Engine</h3>
+              <p className="text-xs text-gray-500">Select based on your clinical accuracy requirement & credit budget</p>
+            </div>
+            <span className="text-xs bg-gray-100 text-gray-600 font-bold px-3 py-1 rounded-full border border-gray-200">
+              PDF & Text Enabled
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {MODES.map(m => {
-              const isActive = (inputMode === "pdf" ? "v1" : mode) === m.id;
-              const isDisabled = inputMode === "pdf" && m.id !== "v1";
+              const isActive = mode === m.id;
               return (
                 <button
                   key={m.id}
-                  onClick={() => !isDisabled && setMode(m.id)}
-                  disabled={isDisabled}
-                  className={`cursor-pointer relative flex-1 text-left p-4 rounded-lg border-2 transition-all duration-200 ${
+                  onClick={() => setMode(m.id)}
+                  className={`cursor-pointer relative flex flex-col justify-between text-left p-5 rounded-xl border-2 transition-all duration-200 ${
                     isActive
-                      ? `${m.activeBorder} ${m.activeBg} shadow-md ring-1 ${m.activeRing}`
-                      : isDisabled
-                        ? "border-gray-200 bg-gray-50 opacity-40 cursor-not-allowed"
-                        : "border-gray-200 bg-white hover:bg-gray-50 hover:border-gray-300"
+                      ? `${m.activeBorder} ${m.activeBg} shadow-md ring-2 ${m.activeRing}`
+                      : "border-gray-200 bg-white hover:bg-gray-50 hover:border-gray-300"
                   }`}
                 >
                   {m.recommended && (
-                    <span className="absolute -top-2.5 right-3 text-[9px] font-bold bg-orange-500 text-white px-2 py-0.5 rounded-full uppercase tracking-wider shadow-sm">
-                      Recommended
+                    <span className="absolute -top-2.5 right-3 text-[9px] font-extrabold bg-purple-600 text-white px-2.5 py-0.5 rounded-full uppercase tracking-wider shadow-sm">
+                      Smart Recommended
                     </span>
                   )}
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="font-bold text-gray-800 text-sm">{m.label}</span>
-                    <span className={`flex items-center gap-1.5 text-[10px] font-bold px-2 py-0.5 rounded-full border ${m.tagColor}`}>
-                      {m.id !== "v1" && (
-                        <span className="relative flex h-1.5 w-1.5">
-                          <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${m.id === 'v2' ? 'bg-blue-500' : 'bg-orange-500'}`}></span>
-                          <span className={`relative inline-flex rounded-full h-1.5 w-1.5 ${m.id === 'v2' ? 'bg-blue-600' : 'bg-orange-600'}`}></span>
-                        </span>
-                      )}
-                      {m.tag}
-                    </span>
+
+                  <div>
+                    {/* Header line */}
+                    <div className="flex items-center justify-between gap-2 mb-2">
+                      <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full border ${m.tagColor}`}>
+                        {m.tag}
+                      </span>
+                      <div className="flex items-center gap-1 bg-white border border-gray-200 px-2 py-0.5 rounded-md text-[11px] font-bold text-gray-700 shadow-2xs">
+                        <span>{m.price}</span>
+                        <span className="text-[9px] text-gray-400">({m.costCredit})</span>
+                      </div>
+                    </div>
+
+                    <h4 className="font-extrabold text-gray-900 text-base mb-1">{m.label}</h4>
+                    <p className="text-gray-600 text-xs leading-relaxed mb-3">{m.description}</p>
                   </div>
-                  <p className="text-gray-500 text-xs leading-relaxed">{m.description}</p>
+
+                  {/* Advantages bullet list */}
+                  <div className="border-t border-gray-200/60 pt-3 mt-1 space-y-1">
+                    <div className="flex items-center justify-between text-[11px] font-bold text-gray-500 mb-1">
+                      <span>Speed:</span>
+                      <span className="text-gray-800">{m.speed}</span>
+                    </div>
+                    {m.advantages.map((adv, idx) => (
+                      <div key={idx} className="flex items-center gap-1.5 text-[11px] text-gray-700">
+                        <span className="text-emerald-500 font-bold">✓</span>
+                        <span>{adv}</span>
+                      </div>
+                    ))}
+                  </div>
+
                   {isActive && (
                     <span className="absolute top-3 right-3 w-5 h-5 rounded-full bg-blue-600 flex items-center justify-center">
                       <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
