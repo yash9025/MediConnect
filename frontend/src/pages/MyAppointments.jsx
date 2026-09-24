@@ -7,7 +7,7 @@ import { MedicalChatBot } from "../features/rag";
 import LiveQueue from "../components/LiveQueue";
 import QueueChat from "../components/QueueChat";
 const MyAppointments = () => {
-  const { currencySymbol, backendUrl, token, getDoctorData } =
+  const { currencySymbol, backendUrl, isAuthenticated, role, getDoctorData } =
     useContext(AppContext);
   const [appointments, setAppointments] = useState([]);
   const months = [
@@ -35,7 +35,7 @@ const MyAppointments = () => {
   const getUserAppointments = async () => {
     try {
       const { data } = await axios.get(`${backendUrl}/api/user/appointments`, {
-        headers: { token },
+        withCredentials: true,
       });
 
       if (data.success) {
@@ -93,7 +93,7 @@ const MyAppointments = () => {
       }
     } catch (error) {
       console.log(error);
-      toast.error(error.message);
+      toast.error(error.response?.data?.message || error.message);
     }
   };
 
@@ -101,7 +101,8 @@ const MyAppointments = () => {
     try {
       const { data } = await axios.post(
         `${backendUrl}/api/user/cancel-appointment`,
-        { appointmentId }
+        { appointmentId },
+        { withCredentials: true }
       );
       if (data.success) {
         toast.success(data.message);
@@ -112,7 +113,7 @@ const MyAppointments = () => {
       }
     } catch (error) {
       console.log(error);
-      toast.error(error.message);
+      toast.error(error.response?.data?.message || error.message);
     }
   };
 
@@ -129,13 +130,14 @@ const MyAppointments = () => {
         try {
           await axios.post(
             `${backendUrl}/api/user/verifyrazorpay`,
-            response
+            response,
+            { withCredentials: true }
           );
           getUserAppointments();
           navigate("/my-appointments");
         } catch (error) {
           console.log(error);
-          toast.error(error.message);
+          toast.error(error.response?.data?.message || error.message);
         }
       },
     };
@@ -147,22 +149,25 @@ const MyAppointments = () => {
     try {
       const { data } = await axios.post(
         `${backendUrl}/api/user/payment-razorpay`,
-        { appointmentId }
+        { appointmentId },
+        { withCredentials: true }
       );
       if (data.success) {
         intitPay(data.order);
       }
     } catch (error) {
       console.log(error);
-      toast.error(error.message);
+      toast.error(error.response?.data?.message || error.message);
     }
   };
 
   useEffect(() => {
-    if (token) {
+    if (isAuthenticated && role === 'patient') {
       getUserAppointments();
+      const timer = setTimeout(getUserAppointments, 600);
+      return () => clearTimeout(timer);
     }
-  }, [token]);
+  }, [isAuthenticated, role]);
 
   return (
     <div className="min-h-screen bg-slate-50 p-4 md:p-8">

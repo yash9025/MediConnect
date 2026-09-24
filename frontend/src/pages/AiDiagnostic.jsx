@@ -1,4 +1,4 @@
-import { useState, useCallback, useContext, useRef } from "react";
+import { useState, useCallback, useContext, useRef, useEffect } from "react";
 import PropTypes from "prop-types";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
@@ -162,6 +162,36 @@ const AiDiagnostic = () => {
   const [streaming, setStreaming]   = useState(false);
   const abortRef                    = useRef(null);
 
+  // Past reports history
+  const [pastReports, setPastReports] = useState([]);
+
+  const fetchPastReports = useCallback(async () => {
+    if (!isAuthenticated) return;
+    try {
+      const { data } = await axios.get(`${backendUrl}/api/lab/user-reports`, { withCredentials: true });
+      if (data.success) {
+        setPastReports(data.reports || []);
+      }
+    } catch (err) {
+      console.error("Failed to fetch past reports:", err);
+    }
+  }, [backendUrl, isAuthenticated]);
+
+  useEffect(() => {
+    fetchPastReports();
+  }, [fetchPastReports]);
+
+  const handleSelectPastReport = (report) => {
+    setV1Result({
+      success: true,
+      analysis: report.aiAnalysis,
+      rag_sources: report.aiAnalysis?.ragSourcesUsed?.map(s => ({ source: s })) || [{ source: "Saved Diagnostic Analysis" }],
+    });
+    setTimeout(() => {
+      document.getElementById("diagnostic-results")?.scrollIntoView({ behavior: "smooth" });
+    }, 100);
+  };
+
   const addLog = (agent, message, type = "log") => {
     setSseLogs(prev => [...prev, { agent, message, type, ts: Date.now() }]);
   };
@@ -312,6 +342,7 @@ const AiDiagnostic = () => {
       addLog("System", err.message || "An error occurred.", "error");
     } finally {
       setLoading(false);
+      fetchPastReports();
     }
   };
 
@@ -546,8 +577,65 @@ const AiDiagnostic = () => {
           <AgentStatusBoard logs={sseLogs} isStreaming={streaming} />
         )}
 
-        {/* ── V1 Result ── */}
-        {v1Result && <V1ResultPanel data={v1Result} />}
+        {/* ── V1/V2 Result ── */}
+        <div id="diagnostic-results">
+          {v1Result && <V1ResultPanel data={v1Result} />}
+        </div>
+
+        {/* ── Past Reports History ── */}
+        {isAuthenticated && pastReports.length > 0 && (
+          <div className="bg-white rounded-xl shadow-lg p-6 mb-6 border border-gray-100 mt-8">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h3 className="text-base font-extrabold text-gray-800 flex items-center gap-2">
+                  <span>📋</span> Previous Diagnostic History
+                </h3>
+                <p className="text-xs text-gray-500">View and inspect your previously analyzed lab reports and diagnostic records</p>
+              </div>
+              <span className="text-xs bg-blue-50 text-blue-700 font-bold px-3 py-1 rounded-full border border-blue-200">
+                {pastReports.length} {pastReports.length === 1 ? 'Report' : 'Reports'} Saved
+              </span>
+            </div>
+
+            <div className="space-y-3 max-h-72 overflow-y-auto pr-1">
+              {pastReports.map((report) => {
+                const dateStr = new Date(report.createdAt).toLocaleDateString("en-US", {
+                  month: "short",
+                  day: "numeric",
+                  year: "numeric",
+                  hour: "2-digit",
+                  minute: "2-digit"
+                });
+                const condition = report.aiAnalysis?.condition_suspected || "Lab Analysis Record";
+                const urgency = report.aiAnalysis?.urgency || "MEDIUM";
+                const urgencyColor = urgency === "HIGH" ? "bg-red-100 text-red-700 border-red-200" : urgency === "LOW" ? "bg-green-100 text-green-700 border-green-200" : "bg-amber-100 text-amber-700 border-amber-200";
+
+                return (
+                  <div key={report._id} className="flex items-center justify-between p-3.5 bg-gray-50 hover:bg-blue-50/50 border border-gray-200 rounded-lg transition-all">
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-gray-800 text-sm">{condition}</span>
+                        <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full uppercase border ${urgencyColor}`}>
+                          {urgency}
+                        </span>
+                      </div>
+                      <p className="text-xs text-gray-500 flex items-center gap-3">
+                        <span>📅 {dateStr}</span>
+                        {report.patientName && <span>👤 {report.patientName}</span>}
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => handleSelectPastReport(report)}
+                      className="cursor-pointer text-xs font-bold bg-white text-blue-600 border border-blue-200 hover:bg-blue-600 hover:text-white px-3.5 py-1.5 rounded-lg transition-all shadow-2xs"
+                    >
+                      View Report →
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
           </>
         )}

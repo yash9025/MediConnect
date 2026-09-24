@@ -9,15 +9,18 @@ export const bookingWorker = new Worker(
   async (job) => {
     const { appointmentData } = job.data;
     
-    // Create new appointment doc
-    const newAppointment = new appointmentModel({
-      ...appointmentData,
-      payment: false,
-      status: "pending"
-    });
+    // Check if document was already saved synchronously by controller
+    const existing = await appointmentModel.findById(appointmentData._id);
+    if (!existing) {
+      const newAppointment = new appointmentModel({
+        ...appointmentData,
+        payment: false,
+        status: "pending"
+      });
+      await newAppointment.save();
+    }
 
-    await newAppointment.save();
-    return { success: true, appointmentId: newAppointment._id };
+    return { success: true, appointmentId: appointmentData._id };
   },
   { 
     connection,

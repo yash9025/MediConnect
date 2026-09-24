@@ -197,9 +197,15 @@ const bookAppointment = async (req, res) => {
       slotDate,
       date: Date.now(),
       tokenNumber: newToken,
+      payment: false,
+      status: "pending"
     };
 
-    // Push to Booking queue instead of saving directly
+    // Save appointment record synchronously so it is immediately available on redirect
+    const newAppointment = new appointmentModel(appointmentData);
+    await newAppointment.save();
+
+    // Push to Booking queue for asynchronous tracking/background processes
     await enqueueBooking({ appointmentData });
 
     // Update doctor slots and notify frontend via Socket.io
@@ -208,7 +214,7 @@ const bookAppointment = async (req, res) => {
     const io = req.app.get("io");
     if (io) io.to("doctor_" + docId).emit("slot-removed", { slotDate, slotTime });
 
-    res.json({ success: true, message: "Appointment Booking Initiated", token: newToken, appointmentId });
+    res.json({ success: true, message: "Appointment Booked Successfully", token: newToken, appointmentId });
 
   } catch (error) {
     console.error(error);

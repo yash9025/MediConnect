@@ -2,6 +2,7 @@ import { medicalGraph } from "../agents/medicalGraph.js";
 import { analyzeReport } from "./labController.js";
 import { v4 as uuidv4 } from "uuid";
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import reportModel from "../models/reportModel.js";
 import fs from "fs";
 import * as dotenv from "dotenv";
 
@@ -9,6 +10,31 @@ dotenv.config();
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 const geminiModel = genAI.getGenerativeModel({ model: process.env.GEMINI_MODEL || "gemini-3.6-flash" });
+const fallbackModel = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+
+// Helper to retry Gemini API calls on 503 / 429 errors with exponential backoff & fallback
+const generateWithRetry = async (promptOrConfig, maxRetries = 3) => {
+  let lastError;
+  for (let i = 0; i < maxRetries; i++) {
+    try {
+      return await geminiModel.generateContent(promptOrConfig);
+    } catch (error) {
+      lastError = error;
+      const isRetryable = error?.status === 503 || error?.status === 429 || String(error?.message).includes("503") || String(error?.message).includes("high demand");
+      if (isRetryable) {
+        console.warn(`[WARN] Gemini API overloaded (${error?.status || '503'}). Retrying ${i + 1}/${maxRetries} in ${1500 * (i + 1)}ms...`);
+        await new Promise(res => setTimeout(res, 1500 * (i + 1)));
+        if (i === maxRetries - 1) {
+          console.warn(`[WARN] Falling back to gemini-2.0-flash for extraction...`);
+          return await fallbackModel.generateContent(promptOrConfig);
+        }
+      } else {
+        throw error;
+      }
+    }
+  }
+  throw lastError;
+};
 
 // Helper to emit an SSE event on the response object
 const emit = (res, event, data) => {
@@ -35,7 +61,7 @@ export const streamAgentAnalysis = async (req, res) => {
     emit(res, "log", { agent: "Extractor Agent", message: `Uploaded PDF detected: ${req.file.originalname}. Extracting report data...` });
     try {
       const pdfBuffer = await fs.promises.readFile(req.file.path);
-      const extractionResult = await geminiModel.generateContent([
+      const extractionResult = await generateWithRetry([
         { inlineData: { data: pdfBuffer.toString("base64"), mimeType: "application/pdf" } },
         { text: "Extract all clinical test values, biomarker names, patient findings, and reference ranges into plain text for medical multi-agent analysis." }
       ]);
@@ -120,6 +146,14 @@ export const streamAgentAnalysis = async (req, res) => {
             analysis: output.finalSummary,
             isAccurate: output.isOutputAccurate,
           });
+
+          if (req.userId) {
+            reportModel.create({
+              userId: req.userId,
+              patientName: "Patient",
+              aiAnalysis: output.finalSummary,
+            }).catch(err => console.error("[WARN] Failed to persist V2 report to history:", err.message));
+          }
         }
 
         emit(res, "log", { agent: agentLabel, message: getEndMessage(nodeName) });

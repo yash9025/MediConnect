@@ -28,7 +28,7 @@ const CONFIG = {
 
 // --- CUSTOM HOOK ---
 const useMedicalChat = () => {
-  const { token } = useContext(AppContext);
+  const { isAuthenticated, role } = useContext(AppContext);
   const backendUrl = import.meta.env.VITE_BACKEND_URL;
 
   const [state, setState] = useState({
@@ -65,14 +65,14 @@ const useMedicalChat = () => {
 
   // 2. Load History on Open
   useEffect(() => {
-    if (!token || !state.isOpen) return;
+    if (!isAuthenticated || !state.isOpen) return;
     const controller = new AbortController();
 
     const fetchHistory = async () => {
       try {
         const { data } = await axios.post(
           `${backendUrl}${CONFIG.ENDPOINTS.GET_HISTORY}`,
-          {}, { signal: controller.signal }
+          {}, { signal: controller.signal, withCredentials: true }
         );
         if (data.success && data.history?.length > 0) {
           updateState({ messages: data.history });
@@ -83,22 +83,23 @@ const useMedicalChat = () => {
     };
     fetchHistory();
     return () => controller.abort();
-  }, [token, state.isOpen, backendUrl, updateState]);
+  }, [isAuthenticated, state.isOpen, backendUrl, updateState]);
 
   // 3. Background Save (Fire & Forget)
   const saveMessageToDb = useCallback(
     async (msg) => {
-      if (!token) return;
+      if (!isAuthenticated) return;
       try {
         await axios.post(
           `${backendUrl}${CONFIG.ENDPOINTS.SAVE_MESSAGE}`,
-          { message: msg }
+          { message: msg },
+          { withCredentials: true }
         );
       } catch (err) {
         console.warn("Failed to save message history:", err);
       }
     },
-    [token, backendUrl]
+    [isAuthenticated, backendUrl]
   );
 
   // 4. Handlers
@@ -137,7 +138,7 @@ const useMedicalChat = () => {
 
   // Delete chat history from database and reset local state
   const confirmResetChat = useCallback(async () => {
-    if (!token) {
+    if (!isAuthenticated) {
       updateState({ 
         messages: [CONFIG.INITIAL_MSG], 
         file: null, 
@@ -151,7 +152,8 @@ const useMedicalChat = () => {
     
     try {
       const { data } = await axios.delete(
-        `${backendUrl}${CONFIG.ENDPOINTS.DELETE_HISTORY}`
+        `${backendUrl}${CONFIG.ENDPOINTS.DELETE_HISTORY}`,
+        { withCredentials: true }
       );
       
       if (data.success) {
@@ -177,7 +179,7 @@ const useMedicalChat = () => {
         isDeleting: false 
       });
     }
-  }, [token, backendUrl, updateState]);
+  }, [isAuthenticated, backendUrl, updateState]);
 
   const toggleChat = useCallback(() => {
     updateState({ isOpen: !state.isOpen });
@@ -215,14 +217,14 @@ const useMedicalChat = () => {
           formData.append("executionMode", "v2");
           fetchOpts = {
             method: "POST",
-            headers: { Accept: "text/event-stream", token },
+            headers: { Accept: "text/event-stream" },
             credentials: "include",
             body: formData,
           };
         } else {
           fetchOpts = {
             method: "POST",
-            headers: { "Content-Type": "application/json", Accept: "text/event-stream", token },
+            headers: { "Content-Type": "application/json", Accept: "text/event-stream" },
             credentials: "include",
             body: JSON.stringify({ rawPdfText: input, executionMode: "v2" }),
           };
@@ -278,7 +280,7 @@ const useMedicalChat = () => {
         const { data } = await axios.post(
           `${backendUrl}${CONFIG.ENDPOINTS.ANALYZE}`,
           formData,
-          { headers: { "Content-Type": "multipart/form-data", token } }
+          { headers: { "Content-Type": "multipart/form-data" }, withCredentials: true }
         );
 
         const botMsg = data.analysis
@@ -309,7 +311,7 @@ const useMedicalChat = () => {
         isLoading: false,
       }));
     }
-  }, [state, backendUrl, token, saveMessageToDb, updateState]);
+  }, [state, backendUrl, isAuthenticated, saveMessageToDb, updateState]);
 
   return {
     ...state,

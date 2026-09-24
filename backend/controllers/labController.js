@@ -300,3 +300,21 @@ export const analyzeReport = async (req, res) => {
     }
   }
 };
+
+/**
+ * GET /api/lab/user-reports
+ * Retrieves all analyzed reports for the authenticated user.
+ */
+export const getUserReports = async (req, res) => {
+  try {
+    const userId = req.userId || req.user?.id;
+    if (!userId) {
+      return res.status(401).json({ success: false, message: "User not authenticated" });
+    }
+    const reports = await reportModel.find({ userId }).sort({ createdAt: -1 });
+    return res.json({ success: true, reports });
+  } catch (error) {
+    console.error("[ERROR] getUserReports failed:", error);
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};

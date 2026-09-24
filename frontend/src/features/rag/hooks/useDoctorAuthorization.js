@@ -2,12 +2,12 @@ import { useState, useCallback } from "react";
 import axios from "axios";
 import { toast } from "react-toastify";
 
-export const useDoctorAuthorization = (reportId, token, backendUrl) => {
+export const useDoctorAuthorization = (reportId, isAuthenticated, backendUrl) => {
   const [authorizedDocs, setAuthorizedDocs] = useState({});
   const [loadingDocs, setLoadingDocs] = useState({});
 
   const authorizeDoctor = useCallback(async (doctorId) => {
-    if (!token) {
+    if (!isAuthenticated) {
       toast.error("Please login to authorize doctors.");
       return;
     }
@@ -17,7 +17,8 @@ export const useDoctorAuthorization = (reportId, token, backendUrl) => {
     try {
       const { data } = await axios.post(
         `${backendUrl}/api/user/authorize-doc`,
-        { reportId, doctorId }
+        { reportId, doctorId },
+        { withCredentials: true }
       );
 
       if (data.success) {
@@ -33,7 +34,7 @@ export const useDoctorAuthorization = (reportId, token, backendUrl) => {
     } finally {
       setLoadingDocs((prev) => ({ ...prev, [doctorId]: false }));
     }
-  }, [token, backendUrl, reportId]);
+  }, [isAuthenticated, backendUrl, reportId]);
 
   return { 
     authorizedDocs, 

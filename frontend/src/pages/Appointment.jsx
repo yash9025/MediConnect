@@ -9,7 +9,7 @@ import { MedicalChatBot } from '../features/rag';
 
 const Appointment = () => {
   const { docId } = useParams();
-  const { doctors, currencySymbol, backendUrl, token, getDoctorData } = useContext(AppContext);
+  const { doctors, currencySymbol, backendUrl, isAuthenticated, role, getDoctorData } = useContext(AppContext);
   const slotContainerRef = useRef(null);
 
   const navigate = useNavigate();
@@ -22,14 +22,10 @@ const Appointment = () => {
   const [slotIndex, setSlotIndex] = useState(0);
   const [slotTime, setSlotTime] = useState('');
 
-
-
   useEffect(() => {
     const foundDoctor = doctors.find(doc => doc._id === docId);
     setDocInfo(foundDoctor);
   }, [doctors, docId]);
-
-  
 
   useEffect(() => {
     const getAvailableSlots = () => {
@@ -81,9 +77,7 @@ const Appointment = () => {
               datetime: new Date(currentDate),
               time: formattedTime
             })
-
           }
-
 
           currentDate.setMinutes(currentDate.getMinutes() + 30);
         }
@@ -93,25 +87,38 @@ const Appointment = () => {
     };
 
     getAvailableSlots();
-  }, [docId,docInfo]);
+  }, [docId, docInfo]);
 
   const bookAppointment = async () => {
-    if (!token) {
+    if (!isAuthenticated) {
       toast.warn('Login to book appointment');
       return navigate('/login');
     }
 
-    try {
+    if (role !== 'patient') {
+      toast.warn('Please login as a patient to book appointments.');
+      return;
+    }
 
+    if (!slotTime) {
+      toast.warn('Please select a time slot.');
+      return;
+    }
+
+    try {
       const date = docSlots[slotIndex][0].datetime;
 
       let day = String(date.getDate()).padStart(2, '0');
       let month = String(date.getMonth() + 1).padStart(2, '0');
       let year = date.getFullYear();
 
-      const slotDate = day + "_" + month + "_" + year
+      const slotDate = day + "_" + month + "_" + year;
 
-      const { data } = await axios.post(backendUrl + '/api/user/book-appointment', { docId, slotDate, slotTime });
+      const { data } = await axios.post(
+        backendUrl + '/api/user/book-appointment', 
+        { docId, slotDate, slotTime },
+        { withCredentials: true }
+      );
 
       if (data.success) {
         toast.success(data.message);
@@ -120,11 +127,9 @@ const Appointment = () => {
       } else {
         toast.error(data.message);
       }
-
     } catch (error) {
       console.log(error);
-      toast.error(error.message);
-
+      toast.error(error.response?.data?.message || error.message);
     }
   }
 
