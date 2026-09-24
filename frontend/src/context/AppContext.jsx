@@ -64,17 +64,26 @@ const AppContextProvider = (props) => {
         }
     };
 
-    // 🔹 New Logout Function
     const logout = async () => {
-        try {
-            await axios.post(backendUrl + '/api/user/logout');
-        } catch (error) {
-            console.error("Logout API failed", error);
-        }
+        const currentRole = localStorage.getItem('role');
+        const logoutEndpoint = currentRole === 'doctor'
+            ? '/api/doctor/logout'
+            : currentRole === 'admin'
+                ? '/api/admin/logout'
+                : '/api/user/logout';
+        
+        // 🔹 Clear client state synchronously so routing (like navigate('/login')) works instantly
         localStorage.removeItem('role');
         setIsAuthenticated(false);
         setRole(null);
         setUserData(null);
+
+        try {
+            // Send the request in the background
+            await axios.post(backendUrl + logoutEndpoint);
+        } catch (error) {
+            console.error("Logout API failed", error);
+        }
     };
 
     useEffect(() => {

@@ -1,19 +1,12 @@
 import { Navigate, Outlet, useLocation } from "react-router-dom";
 
-const getToken = () => localStorage.getItem("token");
-
-const decodeJwtPayload = (token) => {
-  try {
-    const payloadPart = token?.split(".")?.[1];
-    if (!payloadPart) return null;
-
-    const base64 = payloadPart.replace(/-/g, "+").replace(/_/g, "/");
-    const decoded = atob(base64);
-    return JSON.parse(decoded);
-  } catch (error) {
-    return null;
-  }
-};
+/**
+ * Reads the user's role from localStorage.
+ * The access token is an httpOnly cookie (not readable by JS).
+ * The login flow stores the role string in localStorage as the
+ * client-side auth signal, so we check that here.
+ */
+const getRole = () => localStorage.getItem("role");
 
 const roleHomeMap = {
   admin: "/admin/dashboard",
@@ -27,34 +20,18 @@ const ProtectedRoute = ({
   unauthorizedTo = "/unauthorized"
 }) => {
   const location = useLocation();
-  const token = getToken();
+  const role = getRole();
 
-  if (!token) {
-    if (location.pathname === redirectTo) {
-      return <Outlet />;
-    }
-
+  // Not logged in at all — send to login
+  if (!role) {
     return <Navigate to={redirectTo} replace state={{ from: location.pathname }} />;
   }
 
-  const payload = decodeJwtPayload(token);
+  // Logged in but wrong role for this section — send to unauthorized
+  if (allowedRoles.length > 0 && !allowedRoles.includes(role)) {
+    const roleHome = roleHomeMap[role] || "/";
 
-  if (!payload?.role) {
-    localStorage.removeItem("token");
-    if (location.pathname === redirectTo) {
-      return <Outlet />;
-    }
-
-    return <Navigate to={redirectTo} replace state={{ from: location.pathname }} />;
-  }
-
-  if (allowedRoles.length > 0 && !allowedRoles.includes(payload.role)) {
-    const roleHome = roleHomeMap[payload.role] || "/";
-
-    if (location.pathname === unauthorizedTo) {
-      return <Outlet />;
-    }
-
+    // If already on their own home, let them through
     if (location.pathname === roleHome) {
       return <Outlet />;
     }

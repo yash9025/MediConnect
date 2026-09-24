@@ -11,8 +11,8 @@ const retryStrategy = (times) => {
 };
 
 // Create dedicated connections for Pub/Sub
-export const redisPublisher = new Redis(REDIS_URL, { retryStrategy });
-export const redisSubscriber = new Redis(REDIS_URL, { retryStrategy });
+export const redisPublisher = new Redis(REDIS_URL, { retryStrategy, maxRetriesPerRequest: null });
+export const redisSubscriber = new Redis(REDIS_URL, { retryStrategy, maxRetriesPerRequest: null });
 
 redisPublisher.on('error', (err) => { if (err.code !== 'ECONNREFUSED') console.warn('Redis Publisher warning:', err.message) });
 redisSubscriber.on('error', (err) => { if (err.code !== 'ECONNREFUSED') console.warn('Redis Subscriber warning:', err.message) });

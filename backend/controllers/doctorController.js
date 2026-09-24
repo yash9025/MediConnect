@@ -69,7 +69,8 @@ const logoutDoctor = async (req, res) => {
 
 const doctorProfile = async (req, res) => {
   try {
-    const { docId } = req.body;
+    // Use req.user.id (set by verifyToken) — reliable for both GET and POST routes
+    const docId = req.user?.id || req.body.docId;
     const profileData = await doctorModel.findById(docId).select("-password");
     res.json({ success: true, profileData });
   } catch (error) {
@@ -80,7 +81,9 @@ const doctorProfile = async (req, res) => {
 
 const updateDoctorProfile = async (req, res) => {
   try {
-    const { docId, fees, address, available, about } = req.body;
+    // Use req.user.id (set by verifyToken) — reliable for both GET and POST routes
+    const docId = req.user?.id || req.body.docId;
+    const { fees, address, available, about } = req.body;
 
     await doctorModel.findByIdAndUpdate(docId, { fees, address, available, about });
 
@@ -117,7 +120,8 @@ const doctorList = async (req, res) => {
 
 const doctorDashboard = async (req, res) => {
   try {
-    const { docId } = req.body;
+    // Use req.user.id (set by verifyToken) — reliable for both GET and POST routes
+    const docId = req.user?.id || req.body.docId;
     const appointments = await appointmentModel.find({ docId });
 
     // Efficiently calculate earnings and unique patients in one pass or using Sets
@@ -143,7 +147,8 @@ const doctorDashboard = async (req, res) => {
 
 const appointmentsDoctor = async (req, res) => {
   try {
-    const { docId } = req.body;
+    // Use req.user.id (set by verifyToken) — reliable for both GET and POST routes
+    const docId = req.user?.id || req.body.docId;
     const appointments = await appointmentModel.find({ docId });
     res.json({ success: true, appointments });
   } catch (error) {
@@ -157,7 +162,8 @@ const appointmentComplete = async (req, res) => {
     const { docId, appointmentId } = req.body;
     const appointmentData = await appointmentModel.findById(appointmentId);
 
-    if (!appointmentData || appointmentData.docId !== docId) {
+    // Use String() on both sides: appointmentData.docId is an ObjectId, docId is a string
+    if (!appointmentData || String(appointmentData.docId) !== String(docId)) {
       return res.json({ success: false, message: "Invalid Request" });
     }
 
@@ -186,7 +192,8 @@ const appointmentCancel = async (req, res) => {
     const { docId, appointmentId } = req.body;
     const appointmentData = await appointmentModel.findById(appointmentId);
 
-    if (!appointmentData || appointmentData.docId !== docId) {
+    // Use String() on both sides: appointmentData.docId is an ObjectId, docId is a string
+    if (!appointmentData || String(appointmentData.docId) !== String(docId)) {
       return res.json({ success: false, message: "Invalid Request" });
     }
 

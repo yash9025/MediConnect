@@ -40,8 +40,13 @@ const io = new Server(httpServer, {
   maxHttpBufferSize: 1e6,
   perMessageDeflate: false, // Disables CPU-heavy zlib compression for high-density WebSocket loads
   transports: ["websocket", "polling"],
-  adapter: createAdapter(redisPublisher.duplicate(), redisSubscriber.duplicate()),
 });
+
+const pubClient = redisPublisher.duplicate();
+const subClient = redisSubscriber.duplicate();
+pubClient.on('error', (err) => { if (err.code !== 'ECONNREFUSED') console.warn('Socket Redis pubClient warning:', err.message); });
+subClient.on('error', (err) => { if (err.code !== 'ECONNREFUSED') console.warn('Socket Redis subClient warning:', err.message); });
+io.adapter(createAdapter(pubClient, subClient));
 
 app.set("io", io);
 

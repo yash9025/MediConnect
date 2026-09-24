@@ -1,4 +1,4 @@
-import { useState, useEffect, createContext } from "react";
+import { useState, useEffect, createContext, useCallback } from "react";
 import PropTypes from 'prop-types';
 import axios from 'axios';
 import {toast} from 'react-toastify';
@@ -13,22 +13,22 @@ const AdminContextProvider = (props) => {
 
     const backendUrl = import.meta.env.VITE_BACKEND_URL; 
 
-const getAllDoctors = async () => {
-    if (!isAdminAuthenticated) return;
-    
-    try {
-        const {data} = await axios.post(backendUrl + '/api/admin/all-doctors');
-        if(data.success){
-            setDoctors(data.doctors);
-            console.log(data.doctors);
-            
-        }else{
-            toast.error(data.message);
+    const getAllDoctors = useCallback(async () => {
+        if (!isAdminAuthenticated) return;
+        
+        try {
+            const {data} = await axios.post(backendUrl + '/api/admin/all-doctors');
+            if(data.success){
+                setDoctors(data.doctors);
+                console.log(data.doctors);
+                
+            }else{
+                toast.error(data.message);
+            }
+        } catch (error) {
+            toast.error(error.message);
         }
-    } catch (error) {
-        toast.error(error.message);
-    }
-}
+    }, [isAdminAuthenticated, backendUrl]);
 
     useEffect(() => {
         const syncFromStorage = () => {
@@ -40,7 +40,7 @@ const getAllDoctors = async () => {
     }, []);
 
 
-    const changeAvailability = async (docId) => {
+    const changeAvailability = useCallback(async (docId) => {
         if (!isAdminAuthenticated) return;
         try {
             const {data} = await axios.post(backendUrl + '/api/admin/change-availability' , {docId});
@@ -54,9 +54,9 @@ const getAllDoctors = async () => {
             toast.error(error.message)
         }
 
-    }
+    }, [isAdminAuthenticated, backendUrl, getAllDoctors]);
 
-    const getAllAppointments = async () => {
+    const getAllAppointments = useCallback(async () => {
         if (!isAdminAuthenticated) return;
         try {
             const {data} = await axios.get(backendUrl + '/api/admin/appointments');
@@ -68,9 +68,9 @@ const getAllDoctors = async () => {
         } catch (error) {
             toast.error(error.message)
         }
-    }
+    }, [isAdminAuthenticated, backendUrl]);
 
-    const cancelAppointment = async (appointmentId) => {
+    const cancelAppointment = useCallback(async (appointmentId) => {
         if (!isAdminAuthenticated) return;
         try {
             const {data} = await axios.post(backendUrl + '/api/admin/cancel-appointment' , {appointmentId});
@@ -84,9 +84,9 @@ const getAllDoctors = async () => {
         } catch (error) {
             toast.error(error.message);   
         }
-    }
+    }, [isAdminAuthenticated, backendUrl, getAllAppointments]);
 
-    const getDashData = async () => {
+    const getDashData = useCallback(async () => {
         if (!isAdminAuthenticated) return;
         try {
             const {data} = await axios.get(backendUrl + '/api/admin/dashboard');
@@ -100,7 +100,7 @@ const getAllDoctors = async () => {
         } catch (error) {
             toast.error(error.message)   
         }
-    }
+    }, [isAdminAuthenticated, backendUrl]);
 
     const value = {
         isAdminAuthenticated, setIsAdminAuthenticated,
