@@ -40,6 +40,7 @@ const useMedicalChat = () => {
     showResetModal: false,
     isDeleting: false,
     selectedEngine: "v1", // 'v1' ($1.00 Fast RAG) or 'v2' ($2.00 Multi-Agent)
+    selectedCountry: "india", // 'india' | 'usa' | 'uk' | 'global'
   });
 
   const chatEndRef = useRef(null);
@@ -52,6 +53,10 @@ const useMedicalChat = () => {
 
   const setEngine = useCallback((engine) => {
     updateState({ selectedEngine: engine });
+  }, [updateState]);
+
+  const setCountry = useCallback((country) => {
+    updateState({ selectedCountry: country });
   }, [updateState]);
 
   // 1. Auto-scroll to bottom
@@ -215,6 +220,7 @@ const useMedicalChat = () => {
           const formData = new FormData();
           formData.append("pdf", file);
           formData.append("executionMode", "v2");
+          formData.append("country", state.selectedCountry || "india");
           fetchOpts = {
             method: "POST",
             headers: { Accept: "text/event-stream" },
@@ -226,7 +232,7 @@ const useMedicalChat = () => {
             method: "POST",
             headers: { "Content-Type": "application/json", Accept: "text/event-stream" },
             credentials: "include",
-            body: JSON.stringify({ rawPdfText: input, executionMode: "v2" }),
+            body: JSON.stringify({ rawPdfText: input, executionMode: "v2", country: state.selectedCountry || "india" }),
           };
         }
 
@@ -262,7 +268,7 @@ const useMedicalChat = () => {
         }
 
         const botMsg = finalAnalysis
-          ? { type: "bot", isReport: true, data: { analysis: finalAnalysis, rag_sources: [{ source: "Deep Agentic Research Pipeline (V2 SOTA)" }] } }
+          ? { type: "bot", isReport: true, data: { analysis: finalAnalysis, rag_sources: [{ source: `Deep Agentic Research (${(state.selectedCountry || "india").toUpperCase()})` }] } }
           : { type: "bot", text: "Multi-agent deep research complete." };
 
         setState((prev) => ({
@@ -276,6 +282,7 @@ const useMedicalChat = () => {
         const formData = new FormData();
         if (input) formData.append("user_context", input);
         if (file) formData.append("pdf", file);
+        formData.append("country", state.selectedCountry || "india");
 
         const { data } = await axios.post(
           `${backendUrl}${CONFIG.ENDPOINTS.ANALYZE}`,
@@ -317,6 +324,7 @@ const useMedicalChat = () => {
     ...state,
     setInput,
     setEngine,
+    setCountry,
     toggleChat,
     showResetConfirm,
     hideResetConfirm,
@@ -379,10 +387,10 @@ const ChatTrigger = React.memo(({ isOpen, onClick, selectedEngine }) => (
   </div>
 ));
 
-const ChatHeader = React.memo(({ onReset, selectedEngine, onSelectEngine }) => (
-  <header className="bg-gradient-to-r from-slate-900 to-slate-800 p-4 text-white flex justify-between items-center shadow-md z-10 shrink-0">
-    <div className="flex items-center gap-3">
-      <div className="bg-emerald-500/20 p-2 rounded-lg border border-emerald-500/30">
+const ChatHeader = React.memo(({ onReset, selectedEngine, onSelectEngine, selectedCountry, onSelectCountry }) => (
+  <header className="bg-gradient-to-r from-slate-900 to-slate-800 p-4 text-white flex justify-between items-center shadow-md z-10 shrink-0 gap-2">
+    <div className="flex items-center gap-2.5 min-w-0">
+      <div className="bg-emerald-500/20 p-2 rounded-lg border border-emerald-500/30 shrink-0">
         <svg
           xmlns="http://www.w3.org/2000/svg"
           viewBox="0 0 24 24"
@@ -396,65 +404,81 @@ const ChatHeader = React.memo(({ onReset, selectedEngine, onSelectEngine }) => (
           />
         </svg>
       </div>
-      <div>
-        <h3 className="font-bold text-base">LabLens Assistant</h3>
-        <p className="text-[11px] text-slate-400 flex items-center gap-1.5">
+      <div className="truncate">
+        <h3 className="font-bold text-sm md:text-base leading-tight truncate">LabLens Assistant</h3>
+        <p className="text-[11px] text-slate-400 flex items-center gap-1.5 mt-0.5">
           <span className="relative flex h-1.5 w-1.5">
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
             <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500"></span>
           </span>
-          PDF & Text Ready
+          Tiered RAG Active
         </p>
       </div>
     </div>
 
-    {/* Engine Mode Toggle Switch */}
-    <div className="flex items-center bg-slate-800/80 p-1 rounded-lg border border-slate-700 text-xs">
-      <button
-        onClick={() => onSelectEngine("v1")}
-        className={`cursor-pointer px-2.5 py-1 rounded-md font-bold transition-all ${
-          selectedEngine === "v1"
-            ? "bg-emerald-500 text-white shadow-sm"
-            : "text-slate-400 hover:text-white"
-        }`}
-        title="Fast RAG Pipeline ($1.00 / 1 Credit)"
+    {/* Controls: Region Selector + Engine Toggle */}
+    <div className="flex items-center gap-1.5">
+      {/* Jurisdiction Selector */}
+      <select
+        value={selectedCountry}
+        onChange={(e) => onSelectCountry(e.target.value)}
+        className="bg-slate-800 text-slate-200 text-xs font-semibold px-2 py-1.5 rounded-lg border border-slate-700 hover:border-slate-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 cursor-pointer transition-colors"
+        title="Clinical Guideline Jurisdiction (Tiered Fallback: WHO)"
       >
-        V1 ($1.00)
-      </button>
+        <option value="india">🇮🇳 IN (ICMR)</option>
+        <option value="usa">🇺🇸 US (AHA)</option>
+        <option value="uk">🇬🇧 UK (NICE)</option>
+        <option value="global">🌐 WHO</option>
+      </select>
+
+      {/* Engine Mode Toggle Switch */}
+      <div className="flex items-center bg-slate-800/80 p-1 rounded-lg border border-slate-700 text-xs">
+        <button
+          onClick={() => onSelectEngine("v1")}
+          className={`cursor-pointer px-2 py-1 rounded-md font-bold transition-all text-[11px] ${
+            selectedEngine === "v1"
+              ? "bg-emerald-500 text-white shadow-sm"
+              : "text-slate-400 hover:text-white"
+          }`}
+          title="Fast RAG Pipeline ($1.00 / 1 Credit)"
+        >
+          V1
+        </button>
+        <button
+          onClick={() => onSelectEngine("v2")}
+          className={`cursor-pointer px-2 py-1 rounded-md font-bold transition-all text-[11px] ${
+            selectedEngine === "v2"
+              ? "bg-blue-600 text-white shadow-sm"
+              : "text-slate-400 hover:text-white"
+          }`}
+          title="Deep Multi-Agent Research ($2.00 / 2 Credits)"
+        >
+          V2
+        </button>
+      </div>
+
       <button
-        onClick={() => onSelectEngine("v2")}
-        className={`cursor-pointer px-2.5 py-1 rounded-md font-bold transition-all ${
-          selectedEngine === "v2"
-            ? "bg-blue-600 text-white shadow-sm"
-            : "text-slate-400 hover:text-white"
-        }`}
-        title="Deep Multi-Agent Research ($2.00 / 2 Credits)"
+        onClick={onReset}
+        className="cursor-pointer text-slate-400 hover:text-white transition-colors p-1.5 rounded-md hover:bg-white/10 group"
+        aria-label="Reset Chat History"
+        title="Reset Chat"
       >
-        V2 ($2.00)
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          fill="none"
+          viewBox="0 0 24 24"
+          strokeWidth={1.5}
+          stroke="currentColor"
+          className="w-4 h-4 group-hover:rotate-180 transition-transform duration-300"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99"
+          />
+        </svg>
       </button>
     </div>
-
-    <button
-      onClick={onReset}
-      className="cursor-pointer text-slate-400 hover:text-white transition-colors p-2 rounded-md hover:bg-white/10 group"
-      aria-label="Reset Chat History"
-      title="Reset Chat"
-    >
-      <svg
-        xmlns="http://www.w3.org/2000/svg"
-        fill="none"
-        viewBox="0 0 24 24"
-        strokeWidth={1.5}
-        stroke="currentColor"
-        className="w-5 h-5 group-hover:rotate-180 transition-transform duration-300"
-      >
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99"
-        />
-      </svg>
-    </button>
   </header>
 ));
 
@@ -806,7 +830,13 @@ const MedicalChatBot = () => {
 
       {chat.isOpen && (
         <div className="fixed bottom-28 right-4 md:right-8 w-[calc(100vw-2rem)] md:w-[600px] lg:w-[700px] h-[700px] max-h-[85vh] bg-white rounded-2xl shadow-2xl border border-slate-200 flex flex-col z-[9999] overflow-hidden animate-in slide-in-from-bottom-5 fade-in duration-200 ring-1 ring-black/5">
-          <ChatHeader onReset={chat.showResetConfirm} selectedEngine={chat.selectedEngine} onSelectEngine={chat.setEngine} />
+          <ChatHeader 
+            onReset={chat.showResetConfirm} 
+            selectedEngine={chat.selectedEngine} 
+            onSelectEngine={chat.setEngine}
+            selectedCountry={chat.selectedCountry}
+            onSelectCountry={chat.setCountry}
+          />
 
           <MessageList
             messages={chat.messages}

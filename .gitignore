@@ -4,3 +4,15 @@ node_modules/
 dist/
 build/
 graphify-out/
+
+# Knowledge base, ICMR data, and raw PDFs
+*.pdf
+backend/Knowledge_Base/
+backend/ICMR_DATA/
+backend/data/*.pdf
+!sample_reports/*.pdf
+
+# Local interview prep docs and diagrams
+hld_diagram.jpg
+lld_diagram.jpg
+practo_itv_prep.md

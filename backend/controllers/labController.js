@@ -1,7 +1,7 @@
 import { GoogleGenerativeAI, SchemaType } from "@google/generative-ai";
 import { Pinecone } from "@pinecone-database/pinecone";
 import { PineconeStore } from "@langchain/pinecone";
-import { HuggingFaceInferenceEmbeddings } from "@langchain/community/embeddings/hf";
+import { getEmbeddings } from "../config/embeddings.js";
 import { v2 as cloudinary } from "cloudinary";
 import fs from "fs";
 import path from "path";
@@ -13,14 +13,14 @@ import { connection as redisClient } from "../config/redis.js";
 import * as dotenv from "dotenv";
 import { traceable } from "langsmith/traceable"; 
 import crypto from "crypto";
+import { tieredSimilaritySearchWithScore } from "../utils/ragRetriever.js";
 
 dotenv.config();
 
 const CONFIG = {
   PINECONE_INDEX: "mediconnect",
-  EMBEDDING_MODEL: "sentence-transformers/all-mpnet-base-v2",
-  RAG_K: 8,
-  RAG_THRESHOLD: 0.35
+  RAG_K: 5,
+  RAG_THRESHOLD: 0.55
 };
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
@@ -52,10 +52,7 @@ const generateWithRetry = async (promptOrConfig, maxRetries = 3) => {
   throw lastError;
 };
 
-const embeddings = new HuggingFaceInferenceEmbeddings({
-  apiKey: process.env.HF_API_KEY,
-  model: CONFIG.EMBEDDING_MODEL,
-});
+const embeddings = getEmbeddings("RETRIEVAL_QUERY");
 
 let vectorStoreInstance = null;
 
@@ -140,21 +137,20 @@ const expandQueryWithLLM = async (abnormalResults, userSymptoms) => {
   }
 };
 
-const retrieveMedicalContext = async (abnormalResults, userSymptoms) => {
+const retrieveMedicalContext = async (abnormalResults, userSymptoms, country = "india") => {
   if (!abnormalResults.length && !userSymptoms) return [];
 
   const expandedQuery = await expandQueryWithLLM(abnormalResults, userSymptoms);
+  const selectedCountry = (country || "india").toLowerCase().trim();
   
-  // Semantic Caching Strategy (V1)
-  // We hash the normalized query to use as a Redis key. 
-  // In a full Redis Stack deployment, we could use FT.SEARCH for true vector similarity.
+  // Semantic Caching Strategy (V1) - Scoped by country
   const normalizedQuery = expandedQuery.toLowerCase().trim();
-  const cacheKey = `rag_cache:${crypto.createHash('sha256').update(normalizedQuery).digest('hex')}`;
+  const cacheKey = `rag_cache:${selectedCountry}:${crypto.createHash('sha256').update(normalizedQuery).digest('hex')}`;
   
   try {
     const cachedContext = await redisClient.get(cacheKey);
     if (cachedContext) {
-      console.log("[INFO] Cache HIT in Redis for RAG context");
+      console.log(`[INFO] Cache HIT in Redis for RAG context [${selectedCountry}]`);
       return JSON.parse(cachedContext);
     }
   } catch (err) {
@@ -164,17 +160,19 @@ const retrieveMedicalContext = async (abnormalResults, userSymptoms) => {
   try {
     const vectorStore = await getVectorStore();
     
-    console.log("[INFO] Searching Pinecone vector store (Cache MISS)...");
-    const results = await vectorStore.similaritySearchWithScore(expandedQuery, CONFIG.RAG_K);
-    
-    // Filter out low relevance matches to reduce noise
-    const filtered = results.filter(([_, score]) => score >= CONFIG.RAG_THRESHOLD);
-    const finalResults = filtered.length > 0 ? filtered.slice(0, 5) : results.slice(0, 3);
+    console.log(`[INFO] Searching Pinecone vector store with tiered country retrieval [${selectedCountry}]...`);
+    const finalResults = await tieredSimilaritySearchWithScore(vectorStore, expandedQuery, {
+      country: selectedCountry,
+      k: CONFIG.RAG_K,
+      minThreshold: CONFIG.RAG_THRESHOLD
+    });
 
     const formattedContexts = finalResults.map(([doc]) => ({
       content: doc.pageContent,
       source: path.basename(doc.metadata.source_file || "Guidelines").replace(".pdf", ""),
-      category: doc.metadata.category || "General Medicine"
+      category: doc.metadata.category || "General Medicine",
+      country: doc.metadata.country || selectedCountry,
+      authority: doc.metadata.authority || "Medical Authority"
     }));
 
     // Store in Redis with a 7-day TTL (604800 seconds)
@@ -191,18 +189,20 @@ const retrieveMedicalContext = async (abnormalResults, userSymptoms) => {
   }
 };
 
-const generateDiagnosis = traceable(async (abnormalResults, symptoms, contexts, availableSpecialties) => {
-  console.log("[INFO] Generating diagnosis...");
+const generateDiagnosis = traceable(async (abnormalResults, symptoms, contexts, availableSpecialties, country = "india") => {
+  const selectedCountry = (country || "india").toLowerCase().trim();
+  console.log(`[INFO] Generating diagnosis adhering to [${selectedCountry.toUpperCase()}] standards...`);
   const specialistsList = availableSpecialties.join(", ");
   
   const prompt = `
     Role: Senior Medical Advisor.
+    Guideline Standards: Adhering strictly to ${selectedCountry.toUpperCase()} clinical guidelines and WHO protocols.
     Constraint: You MUST recommend a specialist ONLY from this list: [${specialistsList}].
     
     Data:
     - Abnormal Labs: ${JSON.stringify(abnormalResults)}
     - Symptoms: ${symptoms || "None"}
-    - Guidelines: ${contexts.map(c => `[${c.source}]: ${c.content}`).join("\n")}
+    - Guidelines: ${contexts.map(c => `[${(c.country || selectedCountry).toUpperCase()} - ${c.authority || 'Guidelines'} - ${c.source}]: ${c.content}`).join("\n")}
 
     Output JSON:
     {
@@ -237,14 +237,14 @@ const generateDiagnosis = traceable(async (abnormalResults, symptoms, contexts, 
 
 export const analyzeReport = async (req, res) => {
   const localPath = req.file?.path;
-  const { user_context: userSymptoms } = req.body;
+  const { user_context: userSymptoms, country = "india" } = req.body;
   const userId = req.userId;
 
   try {
     if (!userId) return res.status(401).json({ success: false, message: "Unauthorized" });
     if (!localPath && !userSymptoms) throw new Error("Provide PDF or symptoms.");
 
-    console.log(`[INFO] Starting analysis for user: ${userId}`);
+    console.log(`[INFO] Starting analysis for user: ${userId} in region: [${country}]`);
 
     let extraction = { patientName: "Unknown", url: null, allResults: [] };
     if (localPath) extraction = await processPdf(localPath);
@@ -254,19 +254,20 @@ export const analyzeReport = async (req, res) => {
     // Early exit if user is healthy and reported no symptoms
     if (abnormalResults.length === 0 && !userSymptoms) {
       if (localPath) fs.unlinkSync(localPath);
-      return res.json({ success: true, status: "clean", all_results: extraction.allResults });
+      return res.json({ success: true, status: "clean", all_results: extraction.allResults, country_used: country });
     }
 
     const [availableSpecialties, ragContexts] = await Promise.all([
       doctorModel.distinct('speciality', { available: true }),
-      retrieveMedicalContext(abnormalResults, userSymptoms)
+      retrieveMedicalContext(abnormalResults, userSymptoms, country)
     ]);
 
     const diagnosis = await generateDiagnosis(
       abnormalResults, 
       userSymptoms, 
       ragContexts, 
-      availableSpecialties.length ? availableSpecialties : ["General Physician"]
+      availableSpecialties.length ? availableSpecialties : ["General Physician"],
+      country
     );
     
     const matchedDoctors = await findMatchingDoctors(diagnosis.recommended_specialist);
@@ -278,7 +279,7 @@ export const analyzeReport = async (req, res) => {
       pdfContentType: "application/pdf",
       criticalData: abnormalResults,
       allResults: extraction.allResults,
-      aiAnalysis: { ...diagnosis, ragSourcesUsed: ragContexts.map(c => c.source) },
+      aiAnalysis: { ...diagnosis, ragSourcesUsed: ragContexts.map(c => c.source), countryUsed: country },
       matchedDoctorIds: matchedDoctors.map(d => d._id),
     });
 
@@ -287,7 +288,13 @@ export const analyzeReport = async (req, res) => {
       report_id: newReport._id,
       analysis: diagnosis,
       matched_doctors: matchedDoctors,
-      rag_sources: ragContexts.map(c => ({ source: c.source, category: c.category })),
+      rag_sources: ragContexts.map(c => ({ 
+        source: c.source, 
+        category: c.category, 
+        country: c.country, 
+        authority: c.authority 
+      })),
+      country_used: country,
     });
 
   } catch (error) {

@@ -21,6 +21,8 @@ import queueChatModel from "./models/queueChatModel.js";
 import "./workers/bookingWorker.js";
 import "./workers/paymentWorker.js";
 import "./workers/emailWorker.js";
+import "./workers/ragWorker.js";
+import ragRouter from "./routes/ragRoute.js";
 import { createAdapter } from "@socket.io/redis-adapter";
 import { redisPublisher, redisSubscriber } from "./config/pubsub.js";
 
@@ -79,6 +81,7 @@ app.use("/api/lab", labRoutes);
 app.use("/api/chat", chatRouter);
 app.use("/api/agent", agentRouter);
 app.use("/api/auth", authRouter);
+app.use("/api/rag", ragRouter);
 
 app.get("/", (req, res) => res.send("MediConnect API Service Running"));
 

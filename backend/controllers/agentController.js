@@ -47,7 +47,8 @@ const emit = (res, event, data) => {
  * Streams agent progress via Server-Sent Events.
  */
 export const streamAgentAnalysis = async (req, res) => {
-  let { rawPdfText, executionMode = "v2" } = req.body;
+  let { rawPdfText, executionMode = "v2", country = "india" } = req.body;
+  const selectedCountry = (country || "india").toLowerCase().trim();
 
   // ── SSE handshake ──────────────────────────────────────────────────
   res.setHeader("Content-Type", "text/event-stream");
@@ -86,26 +87,26 @@ export const streamAgentAnalysis = async (req, res) => {
   try {
     // ── V1 Branch ─────────────────────────────────────────────────────
     if (executionMode === "v1") {
-      emit(res, "log", { agent: "System", message: "Running Standard AI pipeline (V1)..." });
+      emit(res, "log", { agent: "System", message: `Running Standard AI pipeline (V1) for [${selectedCountry.toUpperCase()}]...` });
       // V1 is a REST endpoint — we call it internally and stream the result
       emit(res, "log", { agent: "Gemini", message: "Extracting lab results from report..." });
-      emit(res, "log", { agent: "Cache", message: "Checking Redis semantic cache..." });
-      emit(res, "log", { agent: "Pinecone", message: "Searching ICMR/MoHFW vector knowledge base..." });
+      emit(res, "log", { agent: "Cache", message: `Checking Redis semantic cache [${selectedCountry}]...` });
+      emit(res, "log", { agent: "Pinecone", message: `Searching ${selectedCountry.toUpperCase()} vector knowledge base...` });
       emit(res, "log", { agent: "Gemini", message: "Generating diagnosis from retrieved guidelines..." });
       // Signal frontend to use standard REST endpoint for actual data
-      emit(res, "complete", { mode: "v1", message: "V1 pipeline complete. Fetching structured result..." });
+      emit(res, "complete", { mode: "v1", country: selectedCountry, message: "V1 pipeline complete. Fetching structured result..." });
       return res.end();
     }
 
     // ── V2 Branch ─────────────────────────────────────────────────────
-    emit(res, "log", { agent: "System", message: "Initializing Deep Agentic Research pipeline (V2)..." });
+    emit(res, "log", { agent: "System", message: `Initializing Deep Agentic Research pipeline (V2) for region [${selectedCountry.toUpperCase()}]...` });
 
     const threadId = uuidv4();
     const config = { configurable: { thread_id: threadId } };
 
     // Stream LangGraph events
     const eventStream = await medicalGraph.streamEvents(
-      { rawPdfText },
+      { rawPdfText, country: selectedCountry },
       { ...config, version: "v2" }
     );
 
@@ -145,13 +146,14 @@ export const streamAgentAnalysis = async (req, res) => {
             message: "Final report synthesized.",
             analysis: output.finalSummary,
             isAccurate: output.isOutputAccurate,
+            country: selectedCountry,
           });
 
           if (req.userId) {
             reportModel.create({
               userId: req.userId,
               patientName: "Patient",
-              aiAnalysis: output.finalSummary,
+              aiAnalysis: { ...output.finalSummary, countryUsed: selectedCountry },
             }).catch(err => console.error("[WARN] Failed to persist V2 report to history:", err.message));
           }
         }

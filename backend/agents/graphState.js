@@ -17,6 +17,10 @@ export const GraphState = Annotation.Root({
     reducer: (x, y) => y ?? x,
     default: () => "",
   }),
+  country: Annotation({
+    reducer: (x, y) => y ?? x,
+    default: () => "india",
+  }),
   anomalies: Annotation({
     reducer: (x, y) => y ?? x,
     default: () => [],

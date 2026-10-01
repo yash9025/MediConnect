@@ -9,6 +9,7 @@ import appointmentModel from "../models/appointmentModel.js";
 import mongoose from "mongoose";
 import { enqueueBooking } from "../workers/bookingQueue.js";
 import { enqueuePaymentVerification } from "../workers/paymentQueue.js";
+import { connection as redisClient } from "../config/redis.js";
 
 // Helper to standardise date format DD_MM_YYYY
 const getTodayDateStr = () => {
@@ -154,12 +155,23 @@ const updateProfile = async (req, res) => {
 // --- Appointment Logic ---
 
 const bookAppointment = async (req, res) => {
+  const { docId, slotDate, slotTime } = req.body;
+  const userId = req.userId;
+  const lockKey = `lock:${docId}:${slotDate}:${slotTime}`;
+
   try {
-    const { docId, slotDate, slotTime } = req.body;
-    const userId = req.userId;
+    // 1. Acquire Granular Redis Lock (Per Doctor + Date + Slot)
+    const acquiredLock = await redisClient.set(lockKey, userId, "NX", "PX", 60000);
+    if (!acquiredLock) {
+      return res.json({ 
+        success: false, 
+        message: "Slot is currently being processed by another patient. Please try again or select another slot." 
+      });
+    }
 
     const docData = await doctorModel.findById(docId).select("-password");
-    if (!docData.available) {
+    if (!docData || !docData.available) {
+      await redisClient.del(lockKey);
       return res.json({ success: false, message: "Doctor not available" });
     }
 
@@ -167,23 +179,18 @@ const bookAppointment = async (req, res) => {
 
     // Check availability
     if (slots_booked[slotDate] && slots_booked[slotDate].includes(slotTime)) {
+      await redisClient.del(lockKey);
       return res.json({ success: false, message: "Slot Not Available" });
     }
 
-    // Reserve slot
-    if (!slots_booked[slotDate]) slots_booked[slotDate] = [];
-    slots_booked[slotDate].push(slotTime);
-
     const userData = await userModel.findById(userId).select("-password");
     
-    // Generate simple incremental token based on existing appointments for this slot
+    // Generate incremental token
     const lastAppt = await appointmentModel.findOne({ docId, slotDate }).sort({ tokenNumber: -1 });
     const newToken = (lastAppt?.tokenNumber || 0) + 1;
 
     // Create appointment record
-    // We remove slots_booked from docData spread to avoid saving heavy nested data into appointment doc
     const { slots_booked: _, ...cleanDocData } = docData.toObject();
-
     const appointmentId = new mongoose.Types.ObjectId();
 
     const appointmentData = {
@@ -201,16 +208,14 @@ const bookAppointment = async (req, res) => {
       status: "pending"
     };
 
-    // Save appointment record synchronously so it is immediately available on redirect
+    // Save appointment record
     const newAppointment = new appointmentModel(appointmentData);
     await newAppointment.save();
 
-    // Push to Booking queue for asynchronous tracking/background processes
-    await enqueueBooking({ appointmentData });
+    // 2. Enqueue into Sharded BullMQ Queue (Per Doctor Group Isolation)
+    await enqueueBooking(appointmentData);
 
-    // Update doctor slots and notify frontend via Socket.io
-    await doctorModel.findByIdAndUpdate(docId, { slots_booked });
-    
+    // Notify frontend via Socket.io
     const io = req.app.get("io");
     if (io) io.to("doctor_" + docId).emit("slot-removed", { slotDate, slotTime });
 
@@ -218,6 +223,7 @@ const bookAppointment = async (req, res) => {
 
   } catch (error) {
     console.error(error);
+    await redisClient.del(lockKey);
     res.json({ success: false, message: error.message });
   }
 };

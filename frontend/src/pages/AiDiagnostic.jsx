@@ -55,6 +55,43 @@ const MODES = [
   },
 ];
 
+// ─── Regional Jurisdiction config ───────────────────────────────────────────
+
+const REGIONS = [
+  {
+    id: "india",
+    label: "India",
+    authority: "ICMR & MoHFW",
+    flag: "🇮🇳",
+    tag: "ICMR/MoHFW",
+    desc: "Indian Council of Medical Research & Ministry guidelines",
+  },
+  {
+    id: "usa",
+    label: "United States",
+    authority: "ACC / AHA / ADA",
+    flag: "🇺🇸",
+    tag: "ACC/AHA/ADA",
+    desc: "American College of Cardiology & ADA standards",
+  },
+  {
+    id: "uk",
+    label: "United Kingdom",
+    authority: "NICE / NHS",
+    flag: "🇬🇧",
+    tag: "NICE/NHS",
+    desc: "National Institute for Health & Care Excellence",
+  },
+  {
+    id: "global",
+    label: "Global (WHO)",
+    authority: "WHO Protocols",
+    flag: "🌐",
+    tag: "WHO",
+    desc: "World Health Organization standard clinical guidance",
+  },
+];
+
 // ─── Urgency config ──────────────────────────────────────────────────────────
 
 const URGENCY = {
@@ -68,9 +105,32 @@ const URGENCY = {
 const V1ResultPanel = ({ data }) => {
   if (!data) return null;
   const u = URGENCY[data.analysis?.urgency] || URGENCY.LOW;
+  const activeRegion = REGIONS.find(r => r.id === (data.country_used || data.analysis?.countryUsed)?.toLowerCase()) || REGIONS[0];
 
   return (
     <div className="space-y-5 mt-8">
+      {/* Regional Jurisdiction Applied Banner */}
+      <div className="flex flex-wrap items-center justify-between gap-3 bg-gradient-to-r from-blue-50 to-teal-50 border border-blue-200/80 rounded-xl px-4 py-3 shadow-2xs">
+        <div className="flex items-center gap-2.5">
+          <span className="text-2xl">{activeRegion.flag}</span>
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-extrabold text-gray-800 uppercase tracking-wide">
+                {activeRegion.label} Clinical Standard
+              </span>
+              <span className="text-[10px] bg-blue-100 text-blue-800 font-bold px-2 py-0.5 rounded-full border border-blue-200">
+                {activeRegion.authority}
+              </span>
+            </div>
+            <p className="text-[11px] text-gray-500">Tiered search priority: {activeRegion.label} guidelines with automatic WHO Global fallback</p>
+          </div>
+        </div>
+        <span className="text-[11px] font-semibold text-emerald-700 bg-emerald-100/70 border border-emerald-300 px-3 py-1 rounded-full flex items-center gap-1.5 shadow-2xs">
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+          Jurisdiction Grounded
+        </span>
+      </div>
+
       {/* Urgency card */}
       <div className={`p-5 rounded-lg border-l-4 ${u.bg} ${u.border}`}>
         <div className="flex items-center gap-2 mb-1">
@@ -128,7 +188,7 @@ const V1ResultPanel = ({ data }) => {
           <div className="flex flex-wrap gap-2">
             {data.rag_sources.map((s, i) => (
               <span key={i} className="text-xs bg-white border border-gray-200 text-gray-600 px-3 py-1.5 rounded-full font-medium shadow-sm">
-                {s.source}
+                {s.authority ? `[${s.authority}] ` : ''}{s.source}
               </span>
             ))}
           </div>
@@ -153,6 +213,9 @@ const AiDiagnostic = () => {
   const [pdfFile, setPdfFile]     = useState(null);
   const [pdfPreviewUrl, setPdfPreviewUrl] = useState(null);
   const fileInputRef              = useRef(null);
+
+  // Jurisdiction & Regional RAG
+  const [country, setCountry]     = useState("india");
 
   // Execution
   const [mode, setMode]             = useState("auto");
@@ -185,6 +248,7 @@ const AiDiagnostic = () => {
     setV1Result({
       success: true,
       analysis: report.aiAnalysis,
+      country_used: report.aiAnalysis?.countryUsed || "india",
       rag_sources: report.aiAnalysis?.ragSourcesUsed?.map(s => ({ source: s })) || [{ source: "Saved Diagnostic Analysis" }],
     });
     setTimeout(() => {
@@ -222,14 +286,15 @@ const AiDiagnostic = () => {
     if (inputMode === "pdf" && pdfFile) {
       const fd = new FormData();
       fd.append("pdf", pdfFile);
+      fd.append("country", country);
       const { data } = await axios.post(url, fd, {
         headers: { "Content-Type": "multipart/form-data" },
       });
       return data;
     }
-    const { data } = await axios.post(url, { user_context: rawText });
+    const { data } = await axios.post(url, { user_context: rawText, country });
     return data;
-  }, [backendUrl, rawText, pdfFile, inputMode]);
+  }, [backendUrl, rawText, pdfFile, inputMode, country]);
 
   // V2 SSE stream (handles raw text OR multipart PDF)
   const runSSE = useCallback((execMode) => {
@@ -243,6 +308,7 @@ const AiDiagnostic = () => {
         const formData = new FormData();
         formData.append("pdf", pdfFile);
         formData.append("executionMode", execMode);
+        formData.append("country", country);
         fetchOpts = {
           method: "POST",
           headers: { Accept: "text/event-stream" },
@@ -255,7 +321,7 @@ const AiDiagnostic = () => {
           method: "POST",
           headers: { "Content-Type": "application/json", Accept: "text/event-stream" },
           credentials: "include",
-          body: JSON.stringify({ rawPdfText: rawText, executionMode: execMode }),
+          body: JSON.stringify({ rawPdfText: rawText, executionMode: execMode, country }),
           signal: ctrl.signal,
         };
       }
@@ -279,7 +345,12 @@ const AiDiagnostic = () => {
               const p = JSON.parse(dataStr);
               if (evType === "log")      addLog(p.agent || "System", p.message, "log");
               else if (evType === "result") { 
-                setV1Result({ success: true, analysis: p.analysis, rag_sources: [{ source: "Deep Agentic Research Pipeline (V2)" }] }); 
+                setV1Result({ 
+                  success: true, 
+                  analysis: p.analysis, 
+                  country_used: p.country || country,
+                  rag_sources: [{ source: `Deep Agentic Research (${(p.country || country).toUpperCase()})` }] 
+                }); 
                 addLog(p.agent || "Synthesizer Agent", p.message, "success"); 
               }
               else if (evType === "complete") resolve({ mode: "v1" });
@@ -304,7 +375,7 @@ const AiDiagnostic = () => {
         })
         .catch(reject);
     });
-  }, [backendUrl, rawText, pdfFile, inputMode]);
+  }, [backendUrl, rawText, pdfFile, inputMode, country]);
 
   // Analyze handler
   const handleAnalyze = async () => {
@@ -315,13 +386,15 @@ const AiDiagnostic = () => {
     setLoading(true);
     reset();
 
+    const selectedRegion = REGIONS.find(r => r.id === country) || REGIONS[0];
+
     try {
       if (mode === "v1") {
-        addLog("System", "Starting Standard AI analysis (V1)...");
+        addLog("System", `Starting Standard AI analysis (V1) for [${selectedRegion.label.toUpperCase()}]...`);
         addLog("Gemini", inputMode === "pdf" ? "Extracting data from PDF report..." : "Processing report text...");
-        addLog("Cache", "Checking Redis semantic cache...");
-        addLog("Pinecone", "Searching ICMR/MoHFW knowledge base...");
-        addLog("Gemini", "Generating diagnosis from retrieved guidelines...");
+        addLog("Cache", `Checking Redis semantic cache [${country}]...`);
+        addLog("Pinecone", `Searching ${selectedRegion.authority} knowledge base (Tiered Fallback: WHO)...`);
+        addLog("Gemini", "Generating diagnosis from retrieved clinical guidelines...");
         const data = await runV1();
         if (!data.success) throw new Error(data.error || "Analysis failed.");
         setV1Result(data);
@@ -473,6 +546,56 @@ const AiDiagnostic = () => {
               />
             </>
           )}
+        </div>
+
+        {/* ── Regional Clinical Jurisdiction Selector ── */}
+        <div className="bg-white rounded-xl shadow-lg p-6 mb-6 border border-gray-100">
+          <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
+            <div>
+              <h3 className="text-base font-extrabold text-gray-800 flex items-center gap-2">
+                <span>🌐</span> Clinical Guideline Jurisdiction
+              </h3>
+              <p className="text-xs text-gray-500">
+                Grounds diagnostic reasoning against local clinical authorities (Tiered Fallback: WHO Global)
+              </p>
+            </div>
+            <span className="text-xs bg-emerald-50 text-emerald-700 font-bold px-3 py-1 rounded-full border border-emerald-200 flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+              Multi-Region RAG Active
+            </span>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            {REGIONS.map((r) => {
+              const isSelected = country === r.id;
+              return (
+                <button
+                  key={r.id}
+                  type="button"
+                  onClick={() => setCountry(r.id)}
+                  disabled={isRunning}
+                  className={`cursor-pointer text-left p-3.5 rounded-xl border-2 transition-all duration-200 flex flex-col justify-between ${
+                    isSelected
+                      ? "border-blue-500 bg-blue-50/70 shadow-sm ring-2 ring-blue-400/30"
+                      : "border-gray-200 bg-white hover:bg-gray-50 hover:border-gray-300"
+                  } disabled:opacity-50 disabled:cursor-not-allowed`}
+                >
+                  <div className="flex items-center justify-between gap-1 mb-2">
+                    <span className="text-2xl">{r.flag}</span>
+                    <span className={`text-[10px] font-extrabold px-1.5 py-0.5 rounded-md border ${
+                      isSelected ? "bg-blue-600 text-white border-blue-600" : "bg-gray-100 text-gray-600 border-gray-200"
+                    }`}>
+                      {r.tag}
+                    </span>
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-gray-900 text-sm leading-snug">{r.label}</h4>
+                    <p className="text-[11px] text-gray-500 line-clamp-1 mt-0.5">{r.authority}</p>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
         </div>
 
         {/* ── Analysis Mode Comparison ── */}
