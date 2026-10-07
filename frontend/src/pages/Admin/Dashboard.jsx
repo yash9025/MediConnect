@@ -13,6 +13,16 @@ const AdminDashboard = () => {
     }
   }, [aToken, getDashData]);
 
+  const isDatePassed = (slotDate) => {
+    const [day, month, year] = slotDate.split('_').map(Number);
+    const appointmentDateInt = year * 10000 + month * 100 + day;
+    
+    const today = new Date();
+    const todayInt = today.getFullYear() * 10000 + (today.getMonth() + 1) * 100 + today.getDate();
+    
+    return appointmentDateInt < todayInt;
+  };
+
   console.log("Dash Data:", dashData);
 
   return dashData && (
@@ -73,6 +83,8 @@ const AdminDashboard = () => {
                   <p className="text-red-400 font-medium">Cancelled</p>
                 ) : appointment.isCompleted ? (
                   <p className="text-green-400 font-medium">Completed</p>
+                ) : isDatePassed(appointment.slotDate) ? (
+                  <p className="text-orange-400 font-medium">Not Attended</p>
                 ) : (
                   <button
                     className="cursor-pointer bg-red-100 text-red-500 rounded-full p-3 hover:bg-red-200 transition"

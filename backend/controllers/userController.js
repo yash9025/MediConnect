@@ -158,73 +158,62 @@ const bookAppointment = async (req, res) => {
   const { docId, slotDate, slotTime } = req.body;
   const userId = req.userId;
   const lockKey = `lock:${docId}:${slotDate}:${slotTime}`;
+  const bookingId = new mongoose.Types.ObjectId();
 
   try {
-    // 1. Acquire Granular Redis Lock (Per Doctor + Date + Slot)
-    const acquiredLock = await redisClient.set(lockKey, userId, "NX", "PX", 60000);
-    if (!acquiredLock) {
-      return res.json({ 
+    // 1. Atomic Lua Script for Slot Reservation (Phase 2 Fast Path)
+    // This executes atomically within Redis, eliminating Check-and-Set race conditions.
+    const reserveSlotLua = `
+      local key = KEYS[1]
+      local uid = ARGV[1]
+      local ttl = ARGV[2]
+      if redis.call("EXISTS", key) == 1 then
+        return 0
+      else
+        redis.call("SET", key, uid, "PX", ttl)
+        return 1
+      end
+    `;
+
+    // Execute script: 1 key (lockKey), 2 args (userId, 60000ms TTL)
+    const result = await redisClient.eval(reserveSlotLua, 1, lockKey, userId, 60000);
+
+    if (result === 0) {
+      return res.status(409).json({ 
         success: false, 
         message: "Slot is currently being processed by another patient. Please try again or select another slot." 
       });
     }
 
-    const docData = await doctorModel.findById(docId).select("-password");
-    if (!docData || !docData.available) {
-      await redisClient.del(lockKey);
-      return res.json({ success: false, message: "Doctor not available" });
-    }
-
-    let slots_booked = docData.slots_booked || {};
-
-    // Check availability
-    if (slots_booked[slotDate] && slots_booked[slotDate].includes(slotTime)) {
-      await redisClient.del(lockKey);
-      return res.json({ success: false, message: "Slot Not Available" });
-    }
-
-    const userData = await userModel.findById(userId).select("-password");
-    
-    // Generate incremental token
-    const lastAppt = await appointmentModel.findOne({ docId, slotDate }).sort({ tokenNumber: -1 });
-    const newToken = (lastAppt?.tokenNumber || 0) + 1;
-
-    // Create appointment record
-    const { slots_booked: _, ...cleanDocData } = docData.toObject();
-    const appointmentId = new mongoose.Types.ObjectId();
-
-    const appointmentData = {
-      _id: appointmentId,
-      userId,
+    // 2. Enqueue Job for Asynchronous Persistence (Phase 3 Handoff)
+    // Send minimal payload to BullMQ. The worker will handle DB reads/writes.
+    const jobPayload = {
+      _id: bookingId, // Pass as _id for consistency with old code
+      bookingId,
       docId,
-      userData,
-      docData: cleanDocData,
-      amount: docData.fees,
-      slotTime,
       slotDate,
+      slotTime,
+      userId,
       date: Date.now(),
-      tokenNumber: newToken,
-      payment: false,
       status: "pending"
     };
 
-    // Save appointment record
-    const newAppointment = new appointmentModel(appointmentData);
-    await newAppointment.save();
+    await enqueueBooking(jobPayload);
 
-    // 2. Enqueue into Sharded BullMQ Queue (Per Doctor Group Isolation)
-    await enqueueBooking(appointmentData);
-
-    // Notify frontend via Socket.io
-    const io = req.app.get("io");
-    if (io) io.to("doctor_" + docId).emit("slot-removed", { slotDate, slotTime });
-
-    res.json({ success: true, message: "Appointment Booked Successfully", token: newToken, appointmentId });
+    // 3. Return 202 Accepted Instantly
+    // Client receives response in <30ms, Express event loop is freed.
+    return res.status(202).json({ 
+      success: true, 
+      message: "Booking request accepted and is being processed.", 
+      bookingId,
+      status: "pending"
+    });
 
   } catch (error) {
-    console.error(error);
-    await redisClient.del(lockKey);
-    res.json({ success: false, message: error.message });
+    console.error("Booking Edge Error:", error);
+    // Best effort lock cleanup in case of catastrophic queue failure
+    await redisClient.del(lockKey).catch(() => {}); 
+    res.status(500).json({ success: false, message: "Internal server error during booking." });
   }
 };
 
@@ -265,6 +254,14 @@ const cancelAppointment = async (req, res) => {
       // Mongoose requires explicit notification for mixed type changes
       doctorData.markModified('slots_booked');
       await doctorData.save();
+    }
+
+    const io = req.app.get("io");
+    if (io) {
+      io.to(`doctor_${docId}`).emit("appointment-cancelled", {
+        slotTime: appointmentData.slotTime,
+        appointmentId
+      });
     }
 
     res.json({ success: true, message: "Appointment Cancelled" });

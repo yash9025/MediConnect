@@ -207,6 +207,7 @@ const useMedicalChat = () => {
       input: "",
       file: null,
       isLoading: true,
+      sseLogs: [],
     });
 
     if (fileInputRef.current) fileInputRef.current.value = "";
@@ -258,17 +259,26 @@ const useMedicalChat = () => {
               if (line.startsWith("event: ")) evType = line.slice(7).trim();
               else if (line.startsWith("data: ")) dataStr = line.slice(6).trim();
             }
-            if (dataStr && evType === "result") {
+            if (dataStr) {
               try {
                 const parsed = JSON.parse(dataStr);
-                finalAnalysis = parsed.analysis;
+                if (evType === "result") {
+                  finalAnalysis = parsed;
+                } else if (evType === "log" || evType === "error" || evType === "done") {
+                  const logMsg = parsed.message || parsed.error || `[${evType}] Event occurred`;
+                  const agent = parsed.agent || "System";
+                  setState(prev => ({
+                    ...prev,
+                    sseLogs: [...(prev.sseLogs || []), { agent, message: logMsg }]
+                  }));
+                }
               } catch (e) {}
             }
           }
         }
 
         const botMsg = finalAnalysis
-          ? { type: "bot", isReport: true, data: { analysis: finalAnalysis, rag_sources: [{ source: `Deep Agentic Research (${(state.selectedCountry || "india").toUpperCase()})` }] } }
+          ? { type: "bot", isReport: true, data: { ...finalAnalysis, rag_sources: [{ source: `Deep Agentic Research (${(state.selectedCountry || "india").toUpperCase()})` }] } }
           : { type: "bot", text: "Multi-agent deep research complete." };
 
         setState((prev) => ({
@@ -482,53 +492,41 @@ const ChatHeader = React.memo(({ onReset, selectedEngine, onSelectEngine, select
   </header>
 ));
 
-const LoadingBubble = React.memo(function LoadingBubble() {
-  const [currentStep, setCurrentStep] = React.useState(0);
-  
-  const steps = [
-    { text: "STEP 1: Processing Lab Report...", duration: 1500 },
-    { text: "STEP 2: Extracting data from PDF...", duration: 2500 },
-    { text: "STEP 3: Filtering abnormal values...", duration: 2000 },
-    { text: "STEP 5: Converting to text for RAG query...", duration: 1500 },
-    { text: "STEP 6: Querying medical knowledge base (RAG)...", duration: 3000 },
-    { text: "STEP 7: Generating AI response with RAG context...", duration: 4000 },
-    { text: "STEP 8: Finding matching specialists...", duration: 2000 },
-  ];
-
-  React.useEffect(() => {
-    if (currentStep >= steps.length - 1) return;
-    
-    const timer = setTimeout(() => {
-      setCurrentStep(prev => prev + 1);
-    }, steps[currentStep].duration);
-    
-    return () => clearTimeout(timer);
-  }, [currentStep]);
+const LoadingBubble = React.memo(function LoadingBubble({ logs = [] }) {
+  // If no real logs yet, show a default starting state
+  const displayLogs = logs.length > 0 
+    ? logs 
+    : [{ agent: "System", message: "Connecting to Multi-Agent Engine..." }];
 
   return (
     <div className="flex justify-start animate-in fade-in duration-300">
       <div className="bg-gradient-to-br from-slate-800 to-slate-900 border border-slate-700 px-5 py-4 rounded-2xl rounded-tl-none shadow-lg min-w-[340px]">
         <div className="font-mono text-xs space-y-1">
-          {steps.slice(0, currentStep + 1).map((step, idx) => (
-            <div 
-              key={idx}
-              className={`flex items-center gap-2 ${
-                idx === currentStep ? 'text-white' : 'text-emerald-400'
-              }`}
-            >
-              {idx === currentStep ? (
-                <svg className="w-3 h-3 text-emerald-400 animate-spin flex-shrink-0" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
-                </svg>
-              ) : (
-                <svg className="w-3 h-3 text-emerald-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                </svg>
-              )}
-              <span>{step.text}</span>
-            </div>
-          ))}
+          {displayLogs.map((log, idx) => {
+            const isLast = idx === displayLogs.length - 1;
+            return (
+              <div 
+                key={idx}
+                className={`flex items-start gap-2 ${
+                  isLast ? 'text-white' : 'text-emerald-400 opacity-70'
+                }`}
+              >
+                {isLast && !log.message.includes("complete") ? (
+                  <svg className="w-3 h-3 text-emerald-400 animate-spin flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                  </svg>
+                ) : (
+                  <svg className="w-3 h-3 text-emerald-500 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                  </svg>
+                )}
+                <span>
+                  <strong className="opacity-75">{log.agent}:</strong> {log.message}
+                </span>
+              </div>
+            );
+          })}
         </div>
       </div>
     </div>
@@ -613,7 +611,7 @@ ResetConfirmModal.propTypes = {
   isDeleting: PropTypes.bool,
 };
 
-const MessageList = React.memo(({ messages, isLoading, chatEndRef }) => (
+const MessageList = React.memo(({ messages, isLoading, chatEndRef, sseLogs }) => (
   <div className="flex-1 overflow-y-auto p-5 space-y-6 bg-gradient-to-b from-slate-50 to-slate-100 scroll-smooth">
     {messages.map((msg, idx) => (
       <div
@@ -661,7 +659,7 @@ const MessageList = React.memo(({ messages, isLoading, chatEndRef }) => (
         </div>
       </div>
     ))}
-    {isLoading && <LoadingBubble />}
+    {isLoading && <LoadingBubble logs={sseLogs} />}
     <div ref={chatEndRef} />
   </div>
 ));
@@ -800,6 +798,7 @@ MessageList.propTypes = {
   messages: PropTypes.array.isRequired,
   isLoading: PropTypes.bool.isRequired,
   chatEndRef: PropTypes.object.isRequired,
+  sseLogs: PropTypes.array,
 };
 InputArea.propTypes = {
   input: PropTypes.string.isRequired,
@@ -842,6 +841,7 @@ const MedicalChatBot = () => {
             messages={chat.messages}
             isLoading={chat.isLoading}
             chatEndRef={chat.chatEndRef}
+            sseLogs={chat.sseLogs}
           />
 
           <InputArea

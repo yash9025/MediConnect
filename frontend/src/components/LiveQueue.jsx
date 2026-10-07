@@ -64,8 +64,11 @@ const LiveQueue = ({ docId, mySlotTime }) => {
         const myMins = parseSlotMinutes(mySlotTime);
         const currentMins = parseSlotMinutes(queueState.currentSlotTime);
 
-        if (myMins <= currentMins) return 0;
-        return Math.max(1, Math.floor((myMins - currentMins) / 15));
+        // Exactly my turn OR doctor is already past my slot
+        if (currentMins >= myMins) return 0;
+        // Slots ahead: each slot = 15 mins; subtract 1 because current slot is being served
+        const slotsAhead = Math.ceil((myMins - currentMins) / 15) - 1;
+        return Math.max(1, slotsAhead);
     }, [queueState.currentSlotTime, mySlotTime]);
 
     // Monitor if slot time has arrived
@@ -227,16 +230,9 @@ const LiveQueue = ({ docId, mySlotTime }) => {
                     <span className="relative inline-flex rounded-full h-4 w-4 bg-red-500"></span>
                 </span>
             </div>
-            <h3 className="text-lg font-bold text-red-800 mb-2">🔴 Doctor is in OT</h3>
+            <h3 className="text-lg font-bold text-red-800 mb-2">🔴 Emergency Operation</h3>
             <p className="text-red-600 text-sm mb-3 leading-relaxed">
-                The doctor has started Emergency Operation. Your slot is at <b className="text-red-700">{mySlotTime}</b>.
-            </p>
-            <div className="bg-white border border-red-100 rounded-xl p-3 mb-3">
-                <p className="text-xs text-red-500 font-medium uppercase tracking-wide mb-1">We Recommend</p>
-                <p className="text-sm text-red-700 font-semibold">Check back 1 hour before your slot</p>
-            </div>
-            <p className="text-xs text-red-400">
-                You will see the live queue when your slot is within 1 hour
+                Doctor is handling an emergency patient. Sorry for the inconvenience, you have to wait.
             </p>
         </div>
     );
@@ -319,11 +315,11 @@ const LiveQueue = ({ docId, mySlotTime }) => {
                         )}
                     </div>
                     <div className="flex items-baseline justify-center gap-1">
-                        <span className="text-3xl font-bold">{queuePosition * queueState.timePerVisit}</span>
+                        <span className="text-3xl font-bold">{Math.round(queuePosition * 0.85 * queueState.timePerVisit)}</span>
                         <span className="text-sm font-medium opacity-80">mins</span>
                     </div>
                     <p className="text-[10px] text-blue-200 mt-1">
-                        {queuePosition} slot{queuePosition !== 1 ? 's' : ''} ahead • ~{queueState.timePerVisit}m per visit
+                        {queuePosition} slot{queuePosition !== 1 ? 's' : ''} ahead (~15% no-shows) • ~{queueState.timePerVisit}m per visit
                     </p>
                 </div>
             </div>
@@ -336,9 +332,8 @@ const LiveQueue = ({ docId, mySlotTime }) => {
     
     console.log(`[LiveQueue] Render decision - opdActive: ${queueState.opdActive}, isWithinOneHour: ${isWithinOneHour}, currentSlotTime: ${queueState.currentSlotTime}`);
     
-    // OPD active (doctor clicked Start OPD but hasn't called anyone yet)
-    // Show red card only if slot is more than 1 hour away
-    if (queueState.opdActive && !isWithinOneHour) {
+    // Emergency operation active
+    if (queueState.opdActive) {
         return renderOpdActiveWaiting();
     }
     

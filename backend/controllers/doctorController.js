@@ -2,6 +2,8 @@ import doctorModel from "../models/doctorModel.js";
 import appointmentModel from "../models/appointmentModel.js";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
+import { connection as redis } from "../config/redis.js";
+import { enqueueOpdSync } from "../workers/opdQueue.js";
 
 // --- Utility Helpers ---
 
@@ -214,37 +216,57 @@ const appointmentCancel = async (req, res) => {
   }
 };
 
-// --- Live Queue System ---
+// --- Live Queue System (High-Throughput Redis Hot-State + BullMQ Write-Behind) ---
 
 const nextPatient = async (req, res) => {
   try {
     const { docId } = req.body;
     const todayStr = getTodayStr();
     const now = new Date();
-    
-    const doctor = await doctorModel.findById(docId);
-    if (!doctor) return res.json({ success: false, message: "Doctor not found" });
+    const queueKey = `opd:queue:${docId}`;
 
-    // 1. Calculate & Update Consultation Analytics
-    // Rolling average of last 10 visits to predict wait times dynamically
-    let { consultationTimes = [], avgConsultationTime = 15 } = doctor;
+    // 1. FAST-PATH: Fetch Hot Queue State from Redis RAM
+    let cachedQueue = null;
+    try {
+      cachedQueue = await redis.hgetall(queueKey);
+    } catch (e) {
+      console.warn("Redis read warning in nextPatient:", e.message);
+    }
 
-    if (doctor.lastQueueDate === todayStr && doctor.lastCallTime && doctor.currentSlotTime) {
-      const durationMins = Math.round((now - new Date(doctor.lastCallTime)) / 60000);
-      
+    let avgConsultationTime = 15;
+    let currentSlotTime = "";
+    let lastCallTime = null;
+    let lastQueueDate = "";
+
+    if (cachedQueue && Object.keys(cachedQueue).length > 0) {
+      currentSlotTime = cachedQueue.currentSlotTime || "";
+      lastQueueDate = cachedQueue.lastQueueDate || "";
+      lastCallTime = cachedQueue.lastCallTime ? new Date(cachedQueue.lastCallTime) : null;
+      avgConsultationTime = cachedQueue.avgConsultationTime ? parseInt(cachedQueue.avgConsultationTime) : 15;
+    } else {
+      // Cold-start fallback: Rehydrate state from MongoDB once
+      const doctor = await doctorModel.findById(docId);
+      if (!doctor) return res.json({ success: false, message: "Doctor not found" });
+      currentSlotTime = doctor.currentSlotTime || "";
+      lastQueueDate = doctor.lastQueueDate || "";
+      lastCallTime = doctor.lastCallTime;
+      avgConsultationTime = doctor.avgConsultationTime || 15;
+    }
+
+    // EWMA TCP-Jacobson Style Queue Analytics
+    if (lastQueueDate === todayStr && lastCallTime && currentSlotTime) {
+      const durationMins = Math.round((now - new Date(lastCallTime)) / 60000);
       if (durationMins >= 1 && durationMins <= 120) {
-        consultationTimes = [...consultationTimes, durationMins].slice(-10); // Keep last 10
-        
-        const recentStats = consultationTimes.slice(-3);
-        avgConsultationTime = Math.round(recentStats.reduce((a, b) => a + b, 0) / recentStats.length);
+        const ALPHA = 0.3; // EWMA smoothing factor
+        avgConsultationTime = Math.round((ALPHA * durationMins) + ((1 - ALPHA) * avgConsultationTime));
       }
     }
 
-    // 2. Determine Next Patient
-    const currentSlotMinutes = doctor.lastQueueDate === todayStr 
-      ? parseSlotMinutes(doctor.currentSlotTime) 
+    const currentSlotMinutes = lastQueueDate === todayStr 
+      ? parseSlotMinutes(currentSlotTime) 
       : -1;
 
+    // Retrieve today's pending appointments
     const pendingAppts = await appointmentModel.find({
       docId,
       slotDate: todayStr,
@@ -253,7 +275,6 @@ const nextPatient = async (req, res) => {
       status: { $nin: ["Skipped", "Absent", "Completed"] }
     });
 
-    // Sort by time and find first slot after current
     const nextAppt = pendingAppts
       .sort((a, b) => parseSlotMinutes(a.slotTime) - parseSlotMinutes(b.slotTime))
       .find(appt => parseSlotMinutes(appt.slotTime) > currentSlotMinutes);
@@ -262,27 +283,30 @@ const nextPatient = async (req, res) => {
       return res.json({ success: false, message: "No more pending patients for today." });
     }
 
-    // 3. Update State & Broadcast
-    await doctorModel.findByIdAndUpdate(docId, {
-      currentSlotTime: nextAppt.slotTime,
-      lastQueueDate: todayStr,
-      lastUpdate: now,
-      lastCallTime: now,
-      consultationTimes,
-      avgConsultationTime,
-      opdActive: false  // Turn off OPD waiting mode once queue starts
-    });
+    // 2. FAST PATH: Update Redis In-Memory State (sub-millisecond)
+    try {
+      await redis.hset(queueKey, {
+        currentSlotTime: nextAppt.slotTime,
+        lastQueueDate: todayStr,
+        lastUpdate: now.toISOString(),
+        lastCallTime: now.toISOString(),
+        avgConsultationTime: String(avgConsultationTime),
+        opdActive: "false"
+      });
+      await redis.expire(queueKey, 86400); // 24-hr TTL
+    } catch (e) {
+      console.warn("Redis write warning in nextPatient:", e.message);
+    }
 
+    // 3. FAST PATH: Instant Real-time WebSocket Broadcast
     const io = req.app.get("io");
     if (io) {
       io.to(`doctor_${docId}`).emit("queue-update", {
         currentSlotTime: nextAppt.slotTime,
         lastUpdate: now,
         avgTime: avgConsultationTime,
-        opdActive: false  // Notify users OPD waiting mode is off
+        opdActive: false
       });
-      
-      // Cross-emit to admin room
       io.to("admin_global_queue_room").emit("global-queue-update", {
         docId,
         currentSlotTime: nextAppt.slotTime,
@@ -292,6 +316,21 @@ const nextPatient = async (req, res) => {
       });
     }
 
+    // 4. SLOW PATH: Write-Behind Persistence via BullMQ (decoupled from HTTP critical path)
+    await enqueueOpdSync({
+      type: "UPDATE_DOCTOR_QUEUE",
+      docId,
+      updateData: {
+        currentSlotTime: nextAppt.slotTime,
+        lastQueueDate: todayStr,
+        lastUpdate: now,
+        lastCallTime: now,
+        avgConsultationTime,
+        opdActive: false
+      }
+    });
+
+    // 5. Instant HTTP 200 Response to Doctor UI
     res.json({ 
       success: true, 
       message: `Calling patient for ${nextAppt.slotTime}`, 
@@ -300,17 +339,16 @@ const nextPatient = async (req, res) => {
     });
 
   } catch (error) {
-    console.error(error);
+    console.error("nextPatient error:", error);
     res.json({ success: false, message: error.message });
   }
 };
-
-
 
 const markAbsent = async (req, res) => {
   try {
     const { docId, appointmentId } = req.body;
     const todayStr = getTodayStr();
+    const queueKey = `opd:queue:${docId}`;
 
     const updatedAppt = await appointmentModel.findOneAndUpdate(
       { _id: appointmentId, docId, slotDate: todayStr },
@@ -320,12 +358,20 @@ const markAbsent = async (req, res) => {
 
     if (!updatedAppt) return res.json({ success: false, message: "Appointment not found" });
 
-    // Auto-advance queue if the absent patient was currently active
-    const doctor = await doctorModel.findById(docId);
-    let nextSlotTime = doctor.currentSlotTime;
+    // Fetch current doctor slot from Redis or DB
+    let currentSlotTime = "";
+    try {
+      currentSlotTime = await redis.hget(queueKey, "currentSlotTime");
+    } catch (e) {}
+    if (!currentSlotTime) {
+      const doctor = await doctorModel.findById(docId);
+      currentSlotTime = doctor?.currentSlotTime || "";
+    }
+
+    let nextSlotTime = currentSlotTime;
     let queueUpdated = false;
 
-    if (doctor.currentSlotTime === updatedAppt.slotTime) {
+    if (currentSlotTime === updatedAppt.slotTime) {
       const pendingAppts = await appointmentModel.find({
         docId,
         slotDate: todayStr,
@@ -334,7 +380,7 @@ const markAbsent = async (req, res) => {
         status: { $nin: ["Absent", "Skipped", "Completed"] }
       });
 
-      const currentMinutes = parseSlotMinutes(doctor.currentSlotTime);
+      const currentMinutes = parseSlotMinutes(currentSlotTime);
       const nextPatient = pendingAppts
         .sort((a, b) => parseSlotMinutes(a.slotTime) - parseSlotMinutes(b.slotTime))
         .find(appt => parseSlotMinutes(appt.slotTime) > currentMinutes);
@@ -342,9 +388,23 @@ const markAbsent = async (req, res) => {
       if (nextPatient) {
         nextSlotTime = nextPatient.slotTime;
         queueUpdated = true;
-        await doctorModel.findByIdAndUpdate(docId, {
-          currentSlotTime: nextSlotTime,
-          lastUpdate: new Date()
+
+        // Fast-path Redis update
+        try {
+          await redis.hset(queueKey, {
+            currentSlotTime: nextSlotTime,
+            lastUpdate: new Date().toISOString()
+          });
+        } catch (e) {}
+
+        // Enqueue Write-Behind persistence to MongoDB
+        await enqueueOpdSync({
+          type: "UPDATE_DOCTOR_QUEUE",
+          docId,
+          updateData: {
+            currentSlotTime: nextSlotTime,
+            lastUpdate: new Date()
+          }
         });
       }
     }
@@ -370,7 +430,7 @@ const markAbsent = async (req, res) => {
 
     res.json({ success: true, message: queueUpdated ? "Marked Absent. Calling next patient." : "Patient marked absent." });
   } catch (error) {
-    console.error(error);
+    console.error("markAbsent error:", error);
     res.json({ success: false, message: error.message });
   }
 };
@@ -378,7 +438,12 @@ const markAbsent = async (req, res) => {
 const resetQueue = async (req, res) => {
   try {
     const { docId } = req.body;
-    await doctorModel.findByIdAndUpdate(docId, { currentSlotTime: "" });
+    const queueKey = `opd:queue:${docId}`;
+
+    // Fast-path Redis update
+    try {
+      await redis.hset(queueKey, "currentSlotTime", "");
+    } catch (e) {}
 
     const io = req.app.get("io");
     if (io) {
@@ -386,9 +451,15 @@ const resetQueue = async (req, res) => {
       io.to("admin_global_queue_room").emit("global-queue-update", { docId, currentSlotTime: "" });
     }
 
+    // Write-behind persistence via BullMQ
+    await enqueueOpdSync({
+      type: "RESET_QUEUE",
+      docId
+    });
+
     res.json({ success: true, message: "Queue Reset" });
   } catch (error) {
-    console.error(error);
+    console.error("resetQueue error:", error);
     res.json({ success: false, message: error.message });
   }
 };
@@ -397,28 +468,67 @@ const getDoctorStatus = async (req, res) => {
   try {
     const { docId } = req.body;
     const todayStr = getTodayStr();
-    
+    const queueKey = `opd:queue:${docId}`;
+
+    // Fast-path read from Redis RAM (0.5ms)
+    try {
+      const cachedQueue = await redis.hgetall(queueKey);
+      if (cachedQueue && cachedQueue.lastQueueDate === todayStr) {
+        const isToday = true;
+        const currentSlotTime = cachedQueue.currentSlotTime || "";
+        const opdActive = cachedQueue.opdActive === "true";
+        const opdStartTime = cachedQueue.opdStartTime ? new Date(cachedQueue.opdStartTime) : null;
+        const dynamicTime = cachedQueue.avgConsultationTime ? parseInt(cachedQueue.avgConsultationTime) : 15;
+        const timeElapsed = cachedQueue.lastCallTime 
+          ? Math.round((new Date() - new Date(cachedQueue.lastCallTime)) / 60000) 
+          : 0;
+
+        return res.json({
+          success: true,
+          currentSlotTime,
+          opdActive,
+          opdStartTime,
+          timePerVisit: dynamicTime,
+          avgConsultationTime: dynamicTime,
+          lastUpdate: cachedQueue.lastUpdate ? new Date(cachedQueue.lastUpdate) : new Date(),
+          timeElapsed,
+          usingLiveAvg: true,
+          cached: true
+        });
+      }
+    } catch (e) {
+      console.warn("Redis read warning in getDoctorStatus:", e.message);
+    }
+
+    // Cache miss: Fall back to MongoDB & hydrate Redis
     const doctor = await doctorModel.findById(docId)
       .select(["currentSlotTime", "lastQueueDate", "lastUpdate", "avgConsultationTime", "consultationTimes", "lastCallTime", "opdActive", "opdStartTime"]);
 
     if (!doctor) return res.json({ success: false, message: "Doctor not found" });
 
-    // Reset data if it's a new day
     const isToday = doctor.lastQueueDate === todayStr;
     const currentSlotTime = isToday ? (doctor.currentSlotTime || "") : "";
     const opdActive = isToday ? (doctor.opdActive || false) : false;
     
-    // Dynamic avg calculation (fallback to 15 if no history)
-    const history = doctor.consultationTimes || [];
-    let dynamicTime = 15;
-    if (history.length > 0) {
-      const recent = history.slice(-3);
-      dynamicTime = Math.round(recent.reduce((a, b) => a + b, 0) / recent.length);
-    }
+    let dynamicTime = doctor.avgConsultationTime || 15;
 
     const timeElapsed = (isToday && doctor.lastCallTime) 
       ? Math.round((new Date() - new Date(doctor.lastCallTime)) / 60000) 
       : 0;
+
+    // Hydrate Redis cache for all subsequent patient reads
+    try {
+      await redis.hset(queueKey, {
+        currentSlotTime,
+        lastQueueDate: doctor.lastQueueDate || "",
+        lastUpdate: (doctor.lastUpdate || new Date()).toISOString(),
+        lastCallTime: doctor.lastCallTime ? new Date(doctor.lastCallTime).toISOString() : "",
+        avgConsultationTime: String(dynamicTime),
+        opdActive: String(opdActive),
+        opdStartTime: doctor.opdStartTime ? new Date(doctor.opdStartTime).toISOString() : ""
+      });
+      await redis.expire(queueKey, 86400);
+    } catch (e) {}
 
     res.json({
       success: true,
@@ -429,11 +539,10 @@ const getDoctorStatus = async (req, res) => {
       avgConsultationTime: dynamicTime,
       lastUpdate: doctor.lastUpdate,
       timeElapsed,
-      consultationHistory: history,
-      usingLast3: history.length > 0
+      usingLiveAvg: true
     });
   } catch (error) {
-    console.error(error);
+    console.error("getDoctorStatus error:", error);
     res.json({ success: false, message: error.message });
   }
 };
@@ -442,32 +551,48 @@ const startOPD = async (req, res) => {
   try {
     const { docId } = req.body;
     const todayStr = getTodayStr();
+    const now = new Date();
+    const queueKey = `opd:queue:${docId}`;
 
-    // Update doctor's OPD status
-    await doctorModel.findByIdAndUpdate(docId, {
-      opdActive: true,
-      opdStartTime: new Date(),
-      lastQueueDate: todayStr  // Also set the queue date
-    });
+    // Fast-path Redis update
+    try {
+      await redis.hset(queueKey, {
+        opdActive: "true",
+        opdStartTime: now.toISOString(),
+        lastQueueDate: todayStr
+      });
+      await redis.expire(queueKey, 86400);
+    } catch (e) {}
 
-    // Emit socket event to notify all patients
+    // Emit socket event to notify all patients immediately
     const io = req.app.get("io");
     if (io) {
       io.to("doctor_" + docId).emit("opd-started", {
         opdActive: true,
-        opdStartTime: new Date()
+        opdStartTime: now
       });
       io.to("admin_global_queue_room").emit("global-queue-update", {
         docId,
         opdActive: true,
-        opdStartTime: new Date()
+        opdStartTime: now
       });
     }
 
-    res.json({ success: true, message: "OPD Started! Patients have been notified." });
+    // Write-behind persistence via BullMQ
+    await enqueueOpdSync({
+      type: "START_OPD",
+      docId,
+      updateData: {
+        opdActive: true,
+        opdStartTime: now,
+        lastQueueDate: todayStr
+      }
+    });
+
+    res.json({ success: true, message: "Emergency operation active. Patients have been notified." });
 
   } catch (error) {
-    console.error(error);
+    console.error("startOPD error:", error);
     res.json({ success: false, message: error.message });
   }
 };

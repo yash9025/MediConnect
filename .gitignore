@@ -16,3 +16,6 @@ backend/data/*.pdf
 hld_diagram.jpg
 lld_diagram.jpg
 practo_itv_prep.md
+
+# Local database clear scripts
+backend/clear_*.js

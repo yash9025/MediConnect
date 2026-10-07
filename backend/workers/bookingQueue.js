@@ -23,7 +23,7 @@ bookingQueue.client.then(client => client.on('error', (err) => {}));
 export async function enqueueBooking(appointmentData) {
   const { docId, slotDate, slotTime, userId } = appointmentData;
   const groupId = `${docId}_${slotDate}`;
-  const jobId = `${userId || 'anon'}_${docId}_${slotDate}_${slotTime}`;
+  const jobId = `${userId || 'anon'}_${docId}_${slotDate}_${slotTime}`.replace(/:/g, '-');
 
   await bookingQueue.add(
     "process-booking",

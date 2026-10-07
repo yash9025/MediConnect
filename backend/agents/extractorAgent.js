@@ -2,6 +2,7 @@ import { z } from "zod";
 import { ChatGoogleGenerativeAI } from "@langchain/google-genai";
 import { SystemMessage, HumanMessage } from "@langchain/core/messages";
 import dotenv from "dotenv";
+import { MODEL_ROTATION } from "../config/modelRotation.js";
 
 dotenv.config();
 
@@ -11,25 +12,40 @@ const extractorSchema = z.object({
   rejectionReason: z.string().optional().describe("If the document is invalid, explain why briefly."),
   anomalies: z.array(z.object({
     biomarker: z.string(),
-    value: z.string().describe("The extracted value of the biomarker"),
+    value: z.number().nullable().describe("The numeric value of the biomarker. Null if non-numeric."),
+    unit: z.string().describe("The unit of measurement (e.g., mg/dL, cells/mcL)"),
+    refRange: z.string().describe("The reference range provided in the report"),
     status: z.enum(["High", "Low", "Normal"]).describe("Whether the value is High, Low, or Normal based on reference ranges provided in the report."),
   })).describe("List of biomarkers extracted. Only focus on ones that are present in the report.")
 });
 
-// Initialize primary & fallback LLMs for extraction
-const primaryLlm = new ChatGoogleGenerativeAI({
-  model: process.env.GEMINI_MODEL || "gemini-3.6-flash",
-  temperature: 0,
-  maxOutputTokens: 2048,
-  apiKey: process.env.GEMINI_API_KEY,
-}).withStructuredOutput(extractorSchema);
+const isOverload = (err) => {
+  const msg = String(err?.message || "");
+  return err?.status === 503 || err?.status === 429 || msg.includes("503") || msg.includes("high demand") || msg.includes("overloaded");
+};
 
-const fallbackLlm = new ChatGoogleGenerativeAI({
-  model: "gemini-3.5-flash",
-  temperature: 0,
-  maxOutputTokens: 2048,
-  apiKey: process.env.GEMINI_API_KEY,
-}).withStructuredOutput(extractorSchema);
+async function invokeExtractor(messages) {
+  for (let i = 0; i < MODEL_ROTATION.length; i++) {
+    try {
+      const llm = new ChatGoogleGenerativeAI({
+        model: MODEL_ROTATION[i],
+        temperature: 0,
+        maxOutputTokens: 2048,
+        apiKey: process.env.GEMINI_API_KEY,
+        maxRetries: 0, // Disable internal backoff
+      }).withStructuredOutput(extractorSchema);
+      const result = await llm.invoke(messages);
+      if (i > 0) console.log(`[Extractor] Succeeded with fallback: ${MODEL_ROTATION[i]}`);
+      return result;
+    } catch (err) {
+      if (isOverload(err) && i < MODEL_ROTATION.length - 1) {
+        console.warn(`[Extractor] ${MODEL_ROTATION[i]} overloaded, trying ${MODEL_ROTATION[i + 1]}...`);
+        continue;
+      }
+      throw err;
+    }
+  }
+}
 
 export async function runExtractor(state) {
   console.log("==> Extractor Agent: Processing Input...");
@@ -49,18 +65,10 @@ If the document is clearly not a blood report (e.g. a grocery receipt, a random 
 
   let response;
   try {
-    try {
-      response = await primaryLlm.invoke([
-        new SystemMessage(systemPrompt),
-        new HumanMessage(`Document Text:\n${state.rawPdfText}`)
-      ]);
-    } catch (err) {
-      console.warn("[WARN] Primary extractor LLM failed, using fallback gemini-1.5-flash:", err?.message);
-      response = await fallbackLlm.invoke([
-        new SystemMessage(systemPrompt),
-        new HumanMessage(`Document Text:\n${state.rawPdfText}`)
-      ]);
-    }
+    response = await invokeExtractor([
+      new SystemMessage(systemPrompt),
+      new HumanMessage(`Document Text:\n${state.rawPdfText}`)
+    ]);
 
     console.log("==> Extractor Agent: Finished extraction.");
     return {

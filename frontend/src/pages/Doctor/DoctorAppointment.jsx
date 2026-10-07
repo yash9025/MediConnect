@@ -79,18 +79,41 @@ const DoctorAppointment = () => {
               setMessages((prev) => [...prev, data]);
           });
 
+          socket.on('slot-removed', () => {
+              getAppointments();
+          });
+
+          socket.on('appointment-cancelled', () => {
+              getAppointments();
+          });
+
           return () => {
               socket.off('receive-queue-message');
+              socket.off('slot-removed');
+              socket.off('appointment-cancelled');
               socket.disconnect();
           };
       }
-  }, [dToken, backendUrl, profileData?._id]);
+  }, [dToken, backendUrl, profileData?._id, getAppointments]);
 
   const handleReportSpam = (userId) => {
       if (!socketRef.current || !profileData?._id) return;
       socketRef.current.emit('report-spam', { docId: profileData._id, userId });
       setReportedUsers((prev) => new Set(prev).add(userId));
       toast.success("User reported. Their messages will be hidden.");
+  };
+
+  const handleAcknowledge = (msg) => {
+      if (!socketRef.current || !profileData?._id) return;
+      
+      const reactData = {
+          msgId: msg._id,
+          reaction: '👍',
+          docId: profileData._id
+      };
+      
+      socketRef.current.emit('react-queue-message', reactData);
+      setMessages(prev => prev.map(m => m._id === msg._id ? { ...m, reaction: '👍' } : m));
   };
 
   const visibleMessages = messages.filter(msg => !reportedUsers.has(msg.userId));
@@ -180,10 +203,10 @@ const DoctorAppointment = () => {
   // Returns true only if the appointment date is TODAY or PAST — actions are locked for future dates
   const isDateReached = (dateString) => {
     const [day, month, year] = dateString.split('_').map(Number);
-    const slotDate = new Date(year, month - 1, day);
+    const appointmentDateInt = year * 10000 + month * 100 + day;
     const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    return slotDate <= today;
+    const todayInt = today.getFullYear() * 10000 + (today.getMonth() + 1) * 100 + today.getDate();
+    return appointmentDateInt <= todayInt;
   };
 
   // Get unique dates from appointments for the dropdown
@@ -440,14 +463,14 @@ const DoctorAppointment = () => {
                   </button>
                 )}
 
-                {/* OPD Active Indicator */}
+                {/* Emergency Operation Active Indicator */}
                 {selectedDate === getTodayStr() && opdActive && (
-                  <div className="flex items-center gap-2 bg-emerald-50 text-emerald-700 px-4 py-2.5 rounded-xl font-bold text-sm border border-emerald-200">
+                  <div className="flex items-center gap-2 bg-red-50 text-red-700 px-4 py-2.5 rounded-xl font-bold text-sm border border-red-200">
                       <span className="relative flex h-3 w-3">
-                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                        <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
                       </span>
-                      <span>OPD Active</span>
+                      <span>🔴 Emergency Operation Active</span>
                   </div>
                 )}
 
@@ -574,8 +597,13 @@ const DoctorAppointment = () => {
                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"></path></svg>
                                        Absent - Book New Appointment
                                     </div>
-                                 ) : (
-                                    <div className="flex items-center gap-2">
+                                 ) : (!isToday(item.slotDate) && isDateReached(item.slotDate)) ? (
+                                     <div className="px-4 py-2 bg-orange-50 text-orange-600 rounded-xl font-bold text-sm border border-orange-100 flex items-center gap-2">
+                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                                        Not Attended
+                                     </div>
+                                  ) : (
+                                     <div className="flex items-center gap-2">
                                         
                                         {/* Lock badge shown for future appointments */}
                                         {!isDateReached(item.slotDate) && (
@@ -682,15 +710,31 @@ const DoctorAppointment = () => {
                               ) : null}
                               <span className="font-bold text-slate-700 text-sm">{msg.senderName}</span>
                            </div>
-                           <button 
-                              onClick={() => handleReportSpam(msg.userId)}
-                              title="Report Spam and Block User"
-                              className="opacity-0 group-hover:opacity-100 transition-opacity text-rose-400 hover:text-rose-600 bg-rose-50 hover:bg-rose-100 p-1.5 rounded-lg border border-rose-100 cursor-pointer"
-                           >
-                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 21v-4m0 0V5a2 2 0 012-2h6.5l1 1H21l-3 6 3 6h-8.5l-1-1H5a2 2 0 00-2 2zm9-13.5V9"></path></svg>
-                           </button>
+                           <div className="opacity-0 group-hover:opacity-100 transition-opacity flex gap-2">
+                              <button 
+                                 onClick={() => handleAcknowledge(msg)}
+                                 title="Acknowledge Message"
+                                 className="text-blue-500 hover:text-blue-700 bg-blue-50 hover:bg-blue-100 p-1.5 rounded-lg border border-blue-100 cursor-pointer flex items-center justify-center"
+                              >
+                                 👍
+                              </button>
+                              <button 
+                                 onClick={() => handleReportSpam(msg.userId)}
+                                 title="Report Spam and Block User"
+                                 className="text-rose-400 hover:text-rose-600 bg-rose-50 hover:bg-rose-100 p-1.5 rounded-lg border border-rose-100 cursor-pointer"
+                              >
+                                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 21v-4m0 0V5a2 2 0 012-2h6.5l1 1H21l-3 6 3 6h-8.5l-1-1H5a2 2 0 00-2 2zm9-13.5V9"></path></svg>
+                              </button>
+                           </div>
                         </div>
-                        <p className="text-slate-600 text-sm leading-relaxed">{msg.message}</p>
+                        <div className="mt-1">
+                           <p className="text-slate-600 text-sm leading-relaxed">{msg.message}</p>
+                           {msg.reaction && (
+                              <span className="mt-1.5 inline-flex items-center gap-1 bg-slate-50 border border-slate-200 rounded-full px-2 py-0.5 text-sm shadow-sm">
+                                 {msg.reaction}
+                              </span>
+                           )}
+                        </div>
                      </div>
                   ))
                )}

@@ -41,7 +41,7 @@ export const refreshToken = async (req, res) => {
     }
 
     // Issue new access token
-    const accessToken = jwt.sign({ id: user._id, role: user.role }, process.env.JWT_SECRET, { expiresIn: '15m' });
+    const accessToken = jwt.sign({ id: user._id, role: role }, process.env.JWT_SECRET, { expiresIn: '15m' });
     res.cookie('accessToken', accessToken, { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax', maxAge: 15 * 60 * 1000 });
 
     return res.json({ success: true, message: 'Token refreshed' });

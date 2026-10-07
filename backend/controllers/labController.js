@@ -9,11 +9,16 @@ import { fileURLToPath } from "url";
 import reportModel from "../models/reportModel.js";
 import doctorModel from "../models/doctorModel.js";
 import { findMatchingDoctors } from "../utils/doctorServices.js";
+import { getAttendingDoctor } from "../services/continuityService.js";
+import { rankDoctorsForPatient } from "../services/doctorRankingService.js";
 import { connection as redisClient } from "../config/redis.js";
 import * as dotenv from "dotenv";
+import pdfParse from "pdf-parse/lib/pdf-parse.js";
 import { traceable } from "langsmith/traceable"; 
 import crypto from "crypto";
 import { tieredSimilaritySearchWithScore } from "../utils/ragRetriever.js";
+
+import { MODEL_ROTATION } from "../config/modelRotation.js";
 
 dotenv.config();
 
@@ -24,32 +29,40 @@ const CONFIG = {
 };
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-const model = genAI.getGenerativeModel({ model: process.env.GEMINI_MODEL || "gemini-3.6-flash" });
-const fallbackModel = genAI.getGenerativeModel({ model: "gemini-3.5-flash" });
 
-// Helper to retry Gemini API calls on 503 / 429 errors
-const generateWithRetry = async (promptOrConfig, maxRetries = 3) => {
-  let lastError;
-  for (let i = 0; i < maxRetries; i++) {
-    try {
-      // Try the primary model
-      return await model.generateContent(promptOrConfig);
-    } catch (error) {
-      lastError = error;
-      const isRetryable = error?.status === 503 || error?.status === 429;
-      if (isRetryable) {
-        console.warn(`[WARN] Gemini API overloaded (${error.status}). Retrying ${i + 1}/${maxRetries} in ${2000 * (i + 1)}ms...`);
-        await new Promise(res => setTimeout(res, 2000 * (i + 1))); // Exponential backoff
-        if (i === maxRetries - 1 && error?.status === 503) {
-            console.warn(`[WARN] Falling back to gemini-1.5-flash...`);
-            return await fallbackModel.generateContent(promptOrConfig);
+// Helper to retry Gemini API calls on 503 / 429 errors rotating through models
+const generateWithRetry = async (promptOrConfig) => {
+  const isOverload = (err) => {
+    const msg = String(err?.message || "");
+    return err?.status === 503 || err?.status === 429 || msg.includes("503") || msg.includes("high demand") || msg.includes("overloaded") || msg.includes("Service Unavailable");
+  };
+
+  for (const modelName of MODEL_ROTATION) {
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        const model = genAI.getGenerativeModel({ model: modelName });
+        const result = await model.generateContent(promptOrConfig);
+        if (modelName !== MODEL_ROTATION[0] || attempt > 0) {
+          console.log(`[labController] Succeeded with ${modelName} on attempt ${attempt + 1}`);
         }
-      } else {
-        throw error; // Not a rate limit / 503, fail immediately
+        return result;
+      } catch (err) {
+        const s = err?.status;
+        if (s === 503 || s === 429 || isOverload(err)) {
+          console.warn(`[labController] ${modelName} overloaded (${s}), retrying attempt ${attempt + 1}/3...`);
+          await new Promise(r => setTimeout(r, 1000 * Math.pow(2, attempt)));
+          continue; // Retry same model
+        }
+        if (s === 404) {
+          console.warn(`[labController] ${modelName} not found (404), skipping to next model.`);
+          break; // Skip to next model
+        }
+        console.error(`[labController] FATAL ERROR on ${modelName} (${s}):`, err?.message);
+        throw err; // Real error (bad key, etc)
       }
     }
   }
-  throw lastError;
+  throw new Error("All models unavailable");
 };
 
 const embeddings = getEmbeddings("RETRIEVAL_QUERY");
@@ -102,12 +115,14 @@ const processPdf = traceable(async (filePath) => {
     required: ["test_results"],
   };
 
+  const data = await pdfParse(pdfBuffer);
+  const extractedText = data.text;
+
   const result = await generateWithRetry({
     contents: [{
       role: "user",
       parts: [
-        { inlineData: { data: pdfBuffer.toString("base64"), mimeType: "application/pdf" } },
-        { text: "Extract all lab results. Classify status based on reference ranges." },
+        { text: `Raw PDF Text:\n${extractedText}\n\nExtract all lab results. Classify status based on reference ranges.` },
       ],
     }],
     generationConfig: { responseMimeType: "application/json", responseSchema: extractionSchema },
@@ -270,7 +285,69 @@ export const analyzeReport = async (req, res) => {
       country
     );
     
-    const matchedDoctors = await findMatchingDoctors(diagnosis.recommended_specialist);
+    const targetSpecialty = diagnosis.recommended_specialist;
+    const urgency = diagnosis.urgency || "NORMAL";
+    
+    // 1. Fetch Candidate Doctors
+    const candidateDoctors = await findMatchingDoctors(targetSpecialty);
+    
+    // 2. Resolve Continuity
+    const attendingDoctor = await getAttendingDoctor(userId, targetSpecialty);
+    
+    // 3. Score & Gate
+    let recommendationPayload = {};
+    if (attendingDoctor && (urgency === "NORMAL" || urgency === "LOW")) {
+      recommendationPayload = {
+        continuity_applied: true,
+        pinned_doctor: attendingDoctor,
+        badge: "Your Care Continuity Specialist",
+        reason: "Previously reviewed your clinical baseline and treatment history.",
+        matched_doctors: rankDoctorsForPatient({
+          doctors: candidateDoctors,
+          attendingDoctorId: attendingDoctor._id,
+          urgency,
+          targetSpecialty
+        })
+      };
+    } else if (attendingDoctor && (urgency === "CRITICAL" || urgency === "HIGH")) {
+      const attendingWaitMinutes = attendingDoctor.estimatedWaitMinutes || 60; // Assuming 60 mins fallback
+      if (attendingWaitMinutes <= 45) {
+        recommendationPayload = {
+          continuity_applied: true,
+          pinned_doctor: attendingDoctor,
+          badge: "Emergency Priority (Your Regular Doctor)",
+          matched_doctors: rankDoctorsForPatient({
+            doctors: candidateDoctors,
+            attendingDoctorId: attendingDoctor._id,
+            urgency,
+            targetSpecialty
+          })
+        };
+      } else {
+        const ranked = rankDoctorsForPatient({
+          doctors: candidateDoctors,
+          attendingDoctorId: attendingDoctor._id,
+          urgency,
+          targetSpecialty
+        });
+        recommendationPayload = {
+          continuity_applied: false,
+          triage_override: true,
+          override_reason: `High clinical acuity detected. Dr. ${attendingDoctor.name} is not immediately available; routed to the earliest on-duty specialist.`,
+          previous_doctor_notified: attendingDoctor.name,
+          matched_doctors: ranked
+        };
+      }
+    } else {
+      recommendationPayload = {
+        continuity_applied: false,
+        matched_doctors: rankDoctorsForPatient({
+          doctors: candidateDoctors,
+          urgency,
+          targetSpecialty
+        })
+      };
+    }
 
     const newReport = await reportModel.create({
       userId,
@@ -280,14 +357,14 @@ export const analyzeReport = async (req, res) => {
       criticalData: abnormalResults,
       allResults: extraction.allResults,
       aiAnalysis: { ...diagnosis, ragSourcesUsed: ragContexts.map(c => c.source), countryUsed: country },
-      matchedDoctorIds: matchedDoctors.map(d => d._id),
+      matchedDoctorIds: recommendationPayload.matched_doctors.map(d => d._id),
     });
 
     res.json({
       success: true,
       report_id: newReport._id,
       analysis: diagnosis,
-      matched_doctors: matchedDoctors,
+      ...recommendationPayload,
       rag_sources: ragContexts.map(c => ({ 
         source: c.source, 
         category: c.category, 

@@ -212,6 +212,40 @@ const MyProfile = () => {
           </button>
         )}
       </div>
+
+      {/* DPDP Right to Erasure Section */}
+      <div className="mt-12 mb-8 border border-red-200 bg-red-50/50 rounded-2xl p-6">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <h4 className="text-base font-bold text-red-900 flex items-center gap-2">
+              <span>🛡️</span> DPDP Right to Erasure & Consent Revocation
+            </h4>
+            <p className="text-xs text-red-700 mt-1 max-w-xl leading-relaxed font-medium">
+              Under India's DPDP Act 2023, you can withdraw your consent at any time. Clicking below will purge your blood reports, biomarker embeddings, and AI chat logs (statutory doctor consultation prescriptions are securely archived under NMC 3-year medical record guidelines).
+            </p>
+          </div>
+          <button
+            onClick={async () => {
+              if (window.confirm("Are you sure you want to revoke consent and permanently erase your health data?")) {
+                try {
+                  const { data } = await axios.delete(`${backendUrl}/api/privacy/erasure`, { withCredentials: true });
+                  if (data.success) {
+                    toast.success(data.message);
+                  } else {
+                    toast.error(data.message);
+                  }
+                } catch (err) {
+                  toast.error("Erasure request failed.");
+                }
+              }
+            }}
+            className="shrink-0 cursor-pointer px-5 py-2.5 bg-red-600 hover:bg-red-700 text-white font-bold text-sm rounded-xl shadow-sm transition"
+          >
+            Revoke Consent & Delete My Data
+          </button>
+        </div>
+      </div>
+
       <MedicalChatBot />
     </div>
   );

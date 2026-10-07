@@ -5,6 +5,7 @@ import { assets } from '../assets/assets';
 import RelatedDoctors from '../components/RelatedDoctors';
 import { toast } from "react-toastify";
 import axios from 'axios';
+import { io } from 'socket.io-client';
 import { MedicalChatBot } from '../features/rag';
 
 const Appointment = () => {
@@ -21,6 +22,8 @@ const Appointment = () => {
   const [docSlots, setDocSlots] = useState([]);
   const [slotIndex, setSlotIndex] = useState(0);
   const [slotTime, setSlotTime] = useState('');
+  const [isProcessing, setIsProcessing] = useState(false);
+  const socketRef = useRef(null);
 
   useEffect(() => {
     const foundDoctor = doctors.find(doc => doc._id === docId);
@@ -44,11 +47,15 @@ const Appointment = () => {
           if (today.getHours() >= 9) {
             currentDate.setHours(today.getHours());
             let currentMinutes = today.getMinutes();
-            if (currentMinutes > 30) {
+            if (currentMinutes > 45) {
               currentDate.setHours(currentDate.getHours() + 1);
               currentDate.setMinutes(0);
-            } else if (currentMinutes > 0) {
+            } else if (currentMinutes > 30) {
+              currentDate.setMinutes(45);
+            } else if (currentMinutes > 15) {
               currentDate.setMinutes(30);
+            } else if (currentMinutes > 0) {
+              currentDate.setMinutes(15);
             } else {
               currentDate.setMinutes(0);
             }
@@ -79,7 +86,7 @@ const Appointment = () => {
             })
           }
 
-          currentDate.setMinutes(currentDate.getMinutes() + 30);
+          currentDate.setMinutes(currentDate.getMinutes() + 15);
         }
         slots.push(timeSlots);
       }
@@ -106,6 +113,7 @@ const Appointment = () => {
     }
 
     try {
+      setIsProcessing(true);
       const date = docSlots[slotIndex][0].datetime;
 
       let day = String(date.getDate()).padStart(2, '0');
@@ -120,16 +128,43 @@ const Appointment = () => {
         { withCredentials: true }
       );
 
-      if (data.success) {
+      if (data.success && data.status === "pending") {
+        toast.info("Booking request received, awaiting confirmation...");
+        
+        socketRef.current = io(backendUrl);
+        const socket = socketRef.current;
+        socket.emit("join-job-room", data.bookingId);
+
+        socket.on("booking-confirmed", (updateData) => {
+          toast.success("Appointment Booked Successfully!");
+          getDoctorData();
+          socket.disconnect();
+          setIsProcessing(false);
+          navigate('/my-appointments');
+        });
+
+        // Fallback timeout in case of WebSocket failure
+        setTimeout(() => {
+          if (socketRef.current?.connected) {
+            socket.disconnect();
+            setIsProcessing(false);
+            toast.warn("Confirmation took too long. Please check your appointments tab.");
+            navigate('/my-appointments');
+          }
+        }, 15000);
+      } else if (data.success) {
         toast.success(data.message);
         getDoctorData();
+        setIsProcessing(false);
         navigate('/my-appointments');
       } else {
         toast.error(data.message);
+        setIsProcessing(false);
       }
     } catch (error) {
       console.log(error);
       toast.error(error.response?.data?.message || error.message);
+      setIsProcessing(false);
     }
   }
 
@@ -234,15 +269,16 @@ const Appointment = () => {
         )}
 
         <button
-          className={`mt-10 w-full py-3 text-lg font-semibold rounded-lg transition ${slotTime ? "cursor-pointer bg-blue-500 text-white hover:bg-blue-600" : "bg-gray-300 text-gray-600 cursor-not-allowed"
-            }`}
-          disabled={!slotTime}
+          className={`mt-10 w-full py-3 text-lg font-semibold rounded-lg transition ${
+            isProcessing ? "bg-blue-400 cursor-wait text-white" : slotTime ? "cursor-pointer bg-blue-500 text-white hover:bg-blue-600" : "bg-gray-300 text-gray-600 cursor-not-allowed"
+          }`}
+          disabled={!slotTime || isProcessing}
           onClick={() => {
             bookAppointment();
             window.scrollTo({ top: 0, behavior: "smooth" });
           }}
         >
-          Book Appointment
+          {isProcessing ? "Processing Booking..." : "Book Appointment"}
         </button>
 
       </div>

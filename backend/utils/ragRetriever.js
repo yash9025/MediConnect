@@ -30,8 +30,8 @@ export async function tieredSimilaritySearchWithScore(
   { 
     country = "india", 
     k = 3, 
-    minThreshold = 0.60, 
-    fallbackThreshold = 0.50, 
+    minThreshold = 0.75, 
+    fallbackThreshold = 0.72, 
     domain = null,
     sectionType = null 
   } = {}

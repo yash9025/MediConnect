@@ -17,7 +17,7 @@ const DoctorContextProvider = (props) => {
         
         try {
             
-            const {data} = await axios.get(backendUrl + '/api/doctor/appointments');
+            const {data} = await axios.get(backendUrl + '/api/doctor/appointments', { withCredentials: true });
             if(data.success){
                 setAppointments(data.appointments.reverse());
                 // console.log(data.appointments.reverse());
@@ -37,7 +37,7 @@ const DoctorContextProvider = (props) => {
         
         try {
             
-            const {data} = await axios.post(backendUrl + '/api/doctor/complete-appointment' ,{appointmentId});
+            const {data} = await axios.post(backendUrl + '/api/doctor/complete-appointment' ,{appointmentId}, { withCredentials: true });
             if(data.success){
                 toast.success(data.message);
                 getAppointments();
@@ -56,7 +56,7 @@ const DoctorContextProvider = (props) => {
         
         try {
             
-            const {data} = await axios.post(backendUrl + '/api/doctor/cancel-appointment' ,{appointmentId});
+            const {data} = await axios.post(backendUrl + '/api/doctor/cancel-appointment' ,{appointmentId}, { withCredentials: true });
             if(data.success){
                 toast.success(data.message);
                 getAppointments();
@@ -76,7 +76,7 @@ const DoctorContextProvider = (props) => {
         
         try {
             
-            const {data} = await axios.get(backendUrl + '/api/doctor/dashboard');
+            const {data} = await axios.get(backendUrl + '/api/doctor/dashboard', { withCredentials: true });
             if(data.success){
                 setDashData(data.dashData);
                 console.log(data.dashData);
@@ -94,7 +94,7 @@ const DoctorContextProvider = (props) => {
     const getProfileData = useCallback(async () => {
         if (!isDoctorAuthenticated) return;
         try {
-            const {data} = await axios.get(backendUrl + '/api/doctor/profile');
+            const {data} = await axios.get(backendUrl + '/api/doctor/profile', { withCredentials: true });
             if(data.success){
               setProfileData(data.profileData);
               console.log(data.profileData);

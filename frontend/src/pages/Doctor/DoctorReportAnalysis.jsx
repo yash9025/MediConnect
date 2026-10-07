@@ -96,6 +96,20 @@ const DoctorReportAnalysis = () => {
         );
     };
 
+    const getTrajectoryBadge = (trajectory, pct) => {
+        if (!trajectory) return null;
+        if (trajectory === "Improving_But_Abnormal") {
+            return <span className="bg-yellow-100 text-yellow-800 text-xs px-2 py-0.5 rounded-full font-bold ml-2">↑ {pct} (Improving)</span>;
+        }
+        if (trajectory === "Worsening") {
+            return <span className="bg-red-100 text-red-800 text-xs px-2 py-0.5 rounded-full font-bold ml-2">↓ {pct} (Worsening)</span>;
+        }
+        if (trajectory === "Normalized") {
+            return <span className="bg-green-100 text-green-800 text-xs px-2 py-0.5 rounded-full font-bold ml-2">✓ Normalized</span>;
+        }
+        return <span className="bg-gray-100 text-gray-600 text-xs px-2 py-0.5 rounded-full font-bold ml-2">Stable</span>;
+    };
+
     return (
         // FIX APPLIED HERE: 
         // Changed "md:ml-64" to "ml-16 md:ml-64".
@@ -156,6 +170,17 @@ const DoctorReportAnalysis = () => {
                                 </div>
                             </div>
 
+                            {/* PREVIOUS DOCTOR NOTES BANNER */}
+                            {report.aiAnalysis?.previousDoctorNotes && (
+                                <div className="bg-purple-50 border-b border-purple-100 p-3 px-4 sm:px-6 flex items-start gap-3">
+                                    <span className="text-xl">📝</span>
+                                    <div>
+                                        <h4 className="text-xs font-bold text-purple-800 uppercase tracking-wide">Your Previous Notes</h4>
+                                        <p className="text-sm text-purple-900 font-medium italic mt-0.5">"{report.aiAnalysis.previousDoctorNotes}"</p>
+                                    </div>
+                                </div>
+                            )}
+
                             <div className="p-4 sm:p-6 grid gap-6 lg:grid-cols-2">
                                 <section className="bg-blue-50/60 rounded-xl p-4 sm:p-5 border border-blue-100">
                                     <h4 className="flex items-center gap-2 text-sm font-bold text-blue-800 uppercase tracking-wide mb-3">
@@ -170,6 +195,26 @@ const DoctorReportAnalysis = () => {
                                             <span className="text-xs font-bold text-gray-400 block uppercase">AI Reasoning</span>
                                             {report.aiAnalysis?.reasoning}
                                         </p>
+                                        
+                                        {/* HISTORICAL DELTAS */}
+                                        {report.aiAnalysis?.historicalDeltas && Object.keys(report.aiAnalysis.historicalDeltas).length > 0 && (
+                                            <div className="mt-4 border-t border-blue-200 pt-3">
+                                                <span className="text-xs font-bold text-blue-800 block uppercase mb-2">Longitudinal Trajectories</span>
+                                                <div className="space-y-2">
+                                                    {Object.entries(report.aiAnalysis.historicalDeltas).map(([marker, data]) => (
+                                                        <div key={marker} className="flex justify-between items-center bg-white p-2 rounded border border-blue-100 shadow-sm">
+                                                            <span className="text-sm font-semibold text-gray-800 capitalize">{marker}</span>
+                                                            <div className="flex items-center">
+                                                                <span className="text-sm font-bold text-gray-600">
+                                                                    {data.currentValue} {data.unit}
+                                                                </span>
+                                                                {getTrajectoryBadge(data.clinicalTrajectory, data.deltaPct)}
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
                                     </div>
                                 </section>
 

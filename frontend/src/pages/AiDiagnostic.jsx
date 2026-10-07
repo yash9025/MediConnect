@@ -6,6 +6,7 @@ import { toast } from "react-toastify";
 import { AppContext } from "../context/AppContext";
 import AgentStatusBoard from "../components/AgentStatusBoard";
 import { MedicalChatBot } from "../features/rag";
+import DPDPConsentModal from "../components/DPDPConsentModal";
 
 // ─── Mode configuration ─────────────────────────────────────────────────────
 
@@ -217,6 +218,10 @@ const AiDiagnostic = () => {
   // Jurisdiction & Regional RAG
   const [country, setCountry]     = useState("india");
 
+  // DPDP Consent State
+  const [hasConsented, setHasConsented] = useState(false);
+  const [showConsentModal, setShowConsentModal] = useState(false);
+
   // Execution
   const [mode, setMode]             = useState("auto");
   const [loading, setLoading]       = useState(false);
@@ -378,7 +383,13 @@ const AiDiagnostic = () => {
   }, [backendUrl, rawText, pdfFile, inputMode, country]);
 
   // Analyze handler
-  const handleAnalyze = async () => {
+  const handleAnalyze = async (bypassConsent = false) => {
+    // DPDP Consent Gate
+    if (!hasConsented && bypassConsent !== true) {
+      setShowConsentModal(true);
+      return;
+    }
+
     if (inputMode === "text" && !rawText.trim()) { toast.error("Please paste your lab report text."); return; }
     if (inputMode === "pdf" && !pdfFile)         { toast.error("Please upload a PDF file.");           return; }
     if (!isAuthenticated)                         { toast.error("You must be logged in.");              return; }
@@ -765,6 +776,15 @@ const AiDiagnostic = () => {
 
       </div>
       <MedicalChatBot />
+      <DPDPConsentModal
+        isOpen={showConsentModal}
+        onClose={() => setShowConsentModal(false)}
+        onAccept={() => {
+          setHasConsented(true);
+          setShowConsentModal(false);
+          handleAnalyze(true);
+        }}
+      />
     </div>
   );
 };

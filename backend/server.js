@@ -14,6 +14,7 @@ import labRoutes from "./routes/labRoutes.js";
 import chatRouter from "./routes/chatRoute.js";
 import agentRouter from "./routes/agentRoutes.js";
 import authRouter from "./routes/authRoute.js";
+import privacyRouter from "./routes/privacyRoute.js";
 import doctorModel from "./models/doctorModel.js";
 import queueChatModel from "./models/queueChatModel.js";
 
@@ -22,6 +23,7 @@ import "./workers/bookingWorker.js";
 import "./workers/paymentWorker.js";
 import "./workers/emailWorker.js";
 import "./workers/ragWorker.js";
+import "./workers/opdWorker.js";
 import ragRouter from "./routes/ragRoute.js";
 import { createAdapter } from "@socket.io/redis-adapter";
 import { redisPublisher, redisSubscriber } from "./config/pubsub.js";
@@ -82,6 +84,19 @@ app.use("/api/chat", chatRouter);
 app.use("/api/agent", agentRouter);
 app.use("/api/auth", authRouter);
 app.use("/api/rag", ragRouter);
+app.use("/api/privacy", privacyRouter);
+
+// REST: Load chat history for an appointment
+app.get("/api/queue-chat/history", async (req, res) => {
+  try {
+    const { appointmentId } = req.query;
+    if (!appointmentId) return res.status(400).json({ success: false, message: "appointmentId required" });
+    const msgs = await queueChatModel.find({ appointmentId }).sort({ _id: 1 }).lean();
+    return res.json({ success: true, messages: msgs });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+});
 
 app.get("/", (req, res) => res.send("MediConnect API Service Running"));
 
@@ -122,6 +137,10 @@ io.on("connection", (socket) => {
     socket.join("admin_global_queue_room");
   });
 
+  socket.on("join-user-room", (userId) => {
+    socket.join(`user_${userId}`);
+  });
+
   socket.on("send-queue-message", async (data) => {
     try {
       const { docId, userId, appointmentId, sender, message, senderName, tokenNumber } = data;
@@ -136,14 +155,28 @@ io.on("connection", (socket) => {
         }
       }
 
+      // Set expireAt = 3 days after appointment slot date (parsed from appointmentId's appointment)
+      const expireAt = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000);
       const newMsg = new queueChatModel({
-        docId, userId, appointmentId, sender, message, senderName, tokenNumber
+        docId, userId, appointmentId, sender, message, senderName, tokenNumber, expireAt
       });
-      await newMsg.save();
+      const savedMsg = await newMsg.save();
+      const broadcastMsg = savedMsg.toObject();
+      broadcastMsg.clientId = data.clientId;
 
-      io.to(`doctor_${docId}`).emit("receive-queue-message", newMsg);
+      io.to(`doctor_${docId}`).emit("receive-queue-message", broadcastMsg);
     } catch (error) {
       console.error("Socket send-queue-message error:", error);
+    }
+  });
+
+  socket.on("react-queue-message", async (data) => {
+    try {
+      const { msgId, reaction, docId } = data;
+      await queueChatModel.findByIdAndUpdate(msgId, { reaction });
+      io.to(`doctor_${docId}`).emit("message-reacted", { msgId, reaction });
+    } catch (error) {
+      console.error("Socket react-queue-message error:", error);
     }
   });
 
@@ -165,6 +198,10 @@ redisSubscriber.psubscribe("job_updates_*", (err, count) => {
   if (err) console.error("Failed to subscribe to Redis job channels:", err);
 });
 
+redisSubscriber.subscribe("booking_updates", (err, count) => {
+  if (err) console.error("Failed to subscribe to booking_updates:", err);
+});
+
 redisSubscriber.on("pmessage", (pattern, channel, message) => {
   // channel format: job_updates_{jobId}
   const jobId = channel.split("job_updates_")[1];
@@ -173,6 +210,19 @@ redisSubscriber.on("pmessage", (pattern, channel, message) => {
   io.to(`job_${jobId}`).emit("ai-progress", JSON.parse(message));
 });
 
+redisSubscriber.on("message", (channel, message) => {
+  if (channel === "booking_updates") {
+    try {
+      const data = JSON.parse(message);
+      if (data.type && data.room) {
+        // Broadcast the specific booking update to the targeted room
+        io.to(data.room).emit(data.type, data.payload);
+      }
+    } catch (e) {
+      console.error("Error parsing booking_updates message", e);
+    }
+  }
+});
 app.use((err, req, res, next) => {
   console.error("Uncaught Error:", err.stack);
   res.status(500).json({ 

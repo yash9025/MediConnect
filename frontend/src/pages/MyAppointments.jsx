@@ -32,6 +32,18 @@ const MyAppointments = () => {
     return `${dateArray[0]} ${months[Number(dateArray[1])]} ${dateArray[2]}`;
   };
 
+  const isAppointmentExpired = (slotDate) => {
+    const [day, month, year] = slotDate.split("_").map(Number);
+    const appointmentDateInt = year * 10000 + month * 100 + day;
+
+    const today = new Date();
+    const todayInt = today.getFullYear() * 10000 + (today.getMonth() + 1) * 100 + today.getDate();
+
+    // Only mark as expired if the appointment date is STRICTLY before today
+    // Today's appointments are NEVER expired, regardless of slot time
+    return appointmentDateInt < todayInt;
+  };
+
   const getUserAppointments = async () => {
     try {
       const { data } = await axios.get(`${backendUrl}/api/user/appointments`, {
@@ -298,7 +310,8 @@ const MyAppointments = () => {
               {!item.cancelled &&
                 !item.isCompleted &&
                 item.status !== "Absent" &&
-                item.status !== "Skipped" && (
+                item.status !== "Skipped" &&
+                !isAppointmentExpired(item.slotDate, item.slotTime) && (
                   <div className="w-full lg:w-96 flex-shrink-0 flex flex-col gap-2">
                     <LiveQueue
                       docId={item.docId}
@@ -318,7 +331,8 @@ const MyAppointments = () => {
                   item.payment &&
                   !item.isCompleted &&
                   item.status !== "Absent" &&
-                  item.status !== "Skipped" && (
+                  item.status !== "Skipped" &&
+                  !isAppointmentExpired(item.slotDate, item.slotTime) && (
                     <button className="w-full bg-emerald-50 text-emerald-600 py-3 px-4 rounded-xl font-bold cursor-default border border-emerald-100 flex items-center justify-center gap-2 shadow-sm">
                       <svg
                         className="w-5 h-5"
@@ -341,7 +355,8 @@ const MyAppointments = () => {
                   !item.payment &&
                   !item.isCompleted &&
                   item.status !== "Absent" &&
-                  item.status !== "Skipped" && (
+                  item.status !== "Skipped" &&
+                  !isAppointmentExpired(item.slotDate, item.slotTime) && (
                     <button
                       onClick={() => appointmentRazorpay(item._id)}
                       className="cursor-pointer w-full bg-gradient-to-r from-blue-600 to-sky-600 text-white py-3 px-4 rounded-xl hover:shadow-lg hover:shadow-blue-500/30 transition-all duration-300 font-semibold text-sm transform hover:-translate-y-0.5"
@@ -353,13 +368,27 @@ const MyAppointments = () => {
                 {!item.cancelled &&
                   !item.isCompleted &&
                   item.status !== "Absent" &&
-                  item.status !== "Skipped" && (
+                  item.status !== "Skipped" &&
+                  !isAppointmentExpired(item.slotDate, item.slotTime) && (
                     <button
                       onClick={() => cancelAppointment(item._id)}
                       className="cursor-pointer w-full bg-white text-slate-500 border border-slate-200 py-3 px-4 rounded-xl hover:bg-rose-50 hover:text-rose-600 hover:border-rose-200 transition-all duration-300 font-semibold text-sm"
                     >
                       Cancel
                     </button>
+                  )}
+
+                {!item.cancelled &&
+                  !item.isCompleted &&
+                  item.status !== "Absent" &&
+                  item.status !== "Skipped" &&
+                  isAppointmentExpired(item.slotDate, item.slotTime) && (
+                    <div className="w-full bg-red-50 text-red-600 py-3 px-4 rounded-xl font-medium text-center border border-red-200 flex flex-col items-center">
+                      <span className="text-xs uppercase tracking-widest text-red-400">
+                        Status
+                      </span>
+                      <span className="font-bold">Not Attended</span>
+                    </div>
                   )}
 
                 {item.cancelled && (

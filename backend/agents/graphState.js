@@ -25,6 +25,12 @@ export const GraphState = Annotation.Root({
     reducer: (x, y) => y ?? x,
     default: () => [],
   }),
+  
+  // Historical context for Longitudinal Tracking
+  historicalContext: Annotation({
+    reducer: (x, y) => y ?? x,
+    default: () => null,
+  }),
 
   // Synthesizer guardrail tracker
   isOutputAccurate: Annotation({

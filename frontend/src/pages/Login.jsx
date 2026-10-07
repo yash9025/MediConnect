@@ -194,8 +194,14 @@ const Login = () => {
             </div>
 
             <div>
-              <p className="font-semibold text-blue-900">Doctor</p>
+              <p className="font-semibold text-blue-900">Doctor (Richard)</p>
               <p>Email - richard@mediconnect.com</p>
+              <p>Pass - 12345678</p>
+            </div>
+
+            <div>
+              <p className="font-semibold text-blue-900">Doctor (Rahul Pal)</p>
+              <p>Email - rahul@mediconnect.com</p>
               <p>Pass - 12345678</p>
             </div>
 

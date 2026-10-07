@@ -14,6 +14,17 @@ const AllAppointments = () => {
     }
   }, [aToken]);
 
+  const isDatePassed = (slotDate) => {
+    const [day, month, year] = slotDate.split('_').map(Number);
+    const appointmentDateInt = year * 10000 + month * 100 + day;
+    
+    const today = new Date();
+    const todayInt = today.getFullYear() * 10000 + (today.getMonth() + 1) * 100 + today.getDate();
+    
+    return appointmentDateInt < todayInt;
+  };
+
+
   return (
     <div className="w-full max-w-6xl m-5 md:ml-[250px] ml-16 md:mt-[20px] mt-8 p-4 min-h-screen">
       <h1 className="text-4xl md:text-5xl font-extrabold text-center mt-16 mb-10 
@@ -36,6 +47,8 @@ const AllAppointments = () => {
                 <span className="text-xs text-red-600 font-bold bg-red-100 px-3 py-1 rounded-full">Cancelled</span>
               ) : appointment.isCompleted ? (
                 <span className="text-xs text-green-600 font-bold bg-green-100 px-3 py-1 rounded-full">Completed</span>
+              ) : isDatePassed(appointment.slotDate) ? (
+                <span className="text-xs text-orange-600 font-bold bg-orange-100 px-3 py-1 rounded-full">Not Attended</span>
               ) : (
                 <span className="text-xs text-blue-600 font-bold bg-blue-100 px-3 py-1 rounded-full">Active</span>
               )}
@@ -78,7 +91,7 @@ const AllAppointments = () => {
             </div>
 
             {/* Cancel Button */}
-            {!appointment.cancelled && !appointment.isCompleted && (
+            {!appointment.cancelled && !appointment.isCompleted && !isDatePassed(appointment.slotDate) && (
               <button 
                 onClick={() => cancelAppointment(appointment._id)} 
                 className="w-full mt-4 flex items-center justify-center gap-2 bg-red-50 text-red-500 font-semibold py-2 rounded-lg hover:bg-red-500 hover:text-white transition-all duration-300 cursor-pointer"

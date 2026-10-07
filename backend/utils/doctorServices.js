@@ -7,11 +7,14 @@ export const findMatchingDoctors = async (speciality) => {
       return [];
     }
 
+    // Create a fuzzy regex by stripping common suffixes like "ist", "y", "ies"
+    const rootWord = speciality.replace(/(ist|y|ies)$/i, '');
+    
     // Perform case-insensitive search for available doctors
     const doctors = await doctorModel.find({ 
-      speciality: { $regex: new RegExp(`^${speciality}$`, 'i') }, 
+      speciality: { $regex: new RegExp(rootWord, 'i') }, 
       available: true 
-    }).select("name email image speciality degree experience about fees address slots_booked");
+    }).select("name email image speciality degree experience about fees address slots_booked available");
     
     console.log(`[INFO] Found ${doctors.length} doctors for speciality: ${speciality}`);
 

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useContext } from 'react';
 import { io } from 'socket.io-client';
+import axios from 'axios';
 import { AppContext } from '../context/AppContext';
 
 const QueueChat = ({ docId, appointmentId, userId, tokenNumber }) => {
@@ -28,6 +29,18 @@ const QueueChat = ({ docId, appointmentId, userId, tokenNumber }) => {
         }
     }, [messages, isOpen]);
 
+    // Load persisted chat history when the chat is first opened
+    const [historyLoaded, setHistoryLoaded] = useState(false);
+    useEffect(() => {
+        if (!isOpen || historyLoaded || !appointmentId) return;
+        axios.get(`${backendUrl}/api/queue-chat/history?appointmentId=${appointmentId}`)
+            .then(({ data }) => {
+                if (data.success) setMessages(data.messages);
+            })
+            .catch(() => {})
+            .finally(() => setHistoryLoaded(true));
+    }, [isOpen, historyLoaded, appointmentId, backendUrl]);
+
     useEffect(() => {
         if (!backendUrl || !docId) return;
 
@@ -38,11 +51,18 @@ const QueueChat = ({ docId, appointmentId, userId, tokenNumber }) => {
 
         socket.on('receive-queue-message', (data) => {
             if (String(data.appointmentId) === String(appointmentId)) {
-                // Ignore if it's our own message (handled optimistically)
-                if (data.sender === 'Patient' && data.userId === userId) return;
+                // Update our optimistic message with the real DB _id
+                if (data.sender === 'Patient' && data.userId === userId) {
+                    setMessages(prev => prev.map(m => m.clientId === data.clientId ? { ...m, _id: data._id } : m));
+                    return;
+                }
                 
                 setMessages(prev => [...prev, data]);
             }
+        });
+
+        socket.on('message-reacted', (data) => {
+            setMessages(prev => prev.map(m => m._id === data.msgId ? { ...m, reaction: data.reaction } : m));
         });
 
         socket.on('chat-error', (data) => {
@@ -51,6 +71,7 @@ const QueueChat = ({ docId, appointmentId, userId, tokenNumber }) => {
 
         return () => {
             socket.off('receive-queue-message');
+            socket.off('message-reacted');
             socket.off('chat-error');
             socket.disconnect();
         };
@@ -61,6 +82,7 @@ const QueueChat = ({ docId, appointmentId, userId, tokenNumber }) => {
         if (!inputMsg.trim() || isBlocked) return;
 
         const msgData = {
+            clientId: Date.now().toString(),
             docId,
             userId,
             appointmentId,
@@ -71,7 +93,7 @@ const QueueChat = ({ docId, appointmentId, userId, tokenNumber }) => {
         };
 
         // Optimistically update the UI instantly
-        setMessages(prev => [...prev, { ...msgData, _id: Date.now().toString() }]);
+        setMessages(prev => [...prev, msgData]);
 
         socketRef.current.emit('send-queue-message', msgData);
         setInputMsg('');
@@ -104,9 +126,14 @@ const QueueChat = ({ docId, appointmentId, userId, tokenNumber }) => {
                         ) : (
                             messages.map((msg, idx) => (
                                 <div key={idx} className={`flex ${msg.sender === 'Patient' ? 'justify-end' : 'justify-start'}`}>
-                                    <div className={`max-w-[85%] rounded-2xl px-4 py-2 text-sm ${msg.sender === 'Patient' ? 'bg-blue-600 text-white rounded-br-none' : 'bg-white border border-slate-200 text-slate-700 rounded-bl-none shadow-sm'}`}>
+                                    <div className={`relative max-w-[85%] rounded-2xl px-4 py-2 text-sm ${msg.sender === 'Patient' ? 'bg-blue-600 text-white rounded-br-none' : 'bg-white border border-slate-200 text-slate-700 rounded-bl-none shadow-sm'}`}>
                                         {msg.sender === 'Doctor' && <p className="text-[10px] font-bold text-slate-500 mb-0.5 uppercase tracking-wide">Doctor</p>}
                                         <p>{msg.message}</p>
+                                        {msg.reaction && (
+                                            <span className={`mt-1 inline-flex items-center gap-1 text-sm rounded-full px-2 py-0.5 border ${msg.sender === 'Patient' ? 'bg-blue-500 border-blue-400 text-white' : 'bg-slate-50 border-slate-200 text-slate-700'}`}>
+                                                {msg.reaction}
+                                            </span>
+                                        )}
                                     </div>
                                 </div>
                             ))

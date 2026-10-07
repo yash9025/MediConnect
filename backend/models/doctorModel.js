@@ -75,10 +75,6 @@ const doctorSchema = new mongoose.Schema(
         type: Date,
         default: null  // When the current token was called
     },
-    consultationTimes: {
-        type: [Number],  // Array of recent consultation durations in minutes
-        default: []
-    },
     avgConsultationTime: {
         type: Number,
         default: 15  // Rolling average, starts with default

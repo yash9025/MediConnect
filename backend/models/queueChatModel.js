@@ -8,8 +8,9 @@ const queueChatSchema = new mongoose.Schema({
     message: { type: String, required: true },
     senderName: { type: String },
     tokenNumber: { type: Number },
-    // TTL index: Delete documents 24 hours (86400 seconds) after creation
-    createdAt: { type: Date, default: Date.now, index: { expires: 86400 } }
+    reaction: { type: String, default: null },
+    // TTL: Auto-delete 3 days after appointment date so DB doesn't bulk up with stale chat logs
+    expireAt: { type: Date, index: { expires: 0 } }
 });
 
 const queueChatModel = mongoose.models.queuechat || mongoose.model("queuechat", queueChatSchema);

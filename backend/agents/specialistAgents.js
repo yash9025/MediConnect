@@ -1,34 +1,26 @@
-import { ChatGoogleGenerativeAI } from "@langchain/google-genai";
+import { createResilientLLM } from "../config/modelRotation.js";
 import { SystemMessage, HumanMessage } from "@langchain/core/messages";
 import { Pinecone } from "@pinecone-database/pinecone";
 import { PineconeStore } from "@langchain/pinecone";
-import { HuggingFaceInferenceEmbeddings } from "@langchain/community/embeddings/hf";
+import { getEmbeddings } from "../config/embeddings.js";
 import dotenv from "dotenv";
 
 import { tieredSimilaritySearch } from "../utils/ragRetriever.js";
 
 dotenv.config();
 
-const llm = new ChatGoogleGenerativeAI({
-  model: process.env.GEMINI_MODEL || "gemini-2.0-flash",
-  temperature: 0.1,
-  maxOutputTokens: 1024,
-  apiKey: process.env.GEMINI_API_KEY,
-});
+const llm = createResilientLLM({ temperature: 0.1, maxOutputTokens: 1024 });
 
-const embeddings = new HuggingFaceInferenceEmbeddings({
-  apiKey: process.env.HF_API_KEY,
-  model: "sentence-transformers/all-mpnet-base-v2",
-});
+const queryEmbeddings = getEmbeddings("RETRIEVAL_QUERY");
 
 async function querySpecialistGuidelines(domain, anomalies, country = "india") {
   try {
     const pinecone = new Pinecone({ apiKey: process.env.PINECONE_API_KEY });
     const pineconeIndex = pinecone.Index("mediconnect");
-    const vectorStore = await PineconeStore.fromExistingIndex(embeddings, { pineconeIndex });
+    const vectorStore = await PineconeStore.fromExistingIndex(queryEmbeddings, { pineconeIndex });
     
-    // Construct search query
-    const query = `Guidelines for ${anomalies.map(a => `${a.test_name} ${a.status}`).join(', ')}`;
+    // Construct search query using the correct schema field 'biomarker'
+    const query = `Guidelines for ${anomalies.map(a => `${a.biomarker} ${a.status}`).join(', ')}`;
     
     // Tiered query: prioritize country guidelines, fallback to WHO global
     const results = await tieredSimilaritySearch(vectorStore, query, {

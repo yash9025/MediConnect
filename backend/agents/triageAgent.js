@@ -1,15 +1,10 @@
-import { ChatGoogleGenerativeAI } from "@langchain/google-genai";
+import { createResilientLLM } from "../config/modelRotation.js";
 import { SystemMessage, HumanMessage } from "@langchain/core/messages";
 import dotenv from "dotenv";
 
 dotenv.config();
 
-const llm = new ChatGoogleGenerativeAI({
-  model: process.env.GEMINI_MODEL || "gemini-2.0-flash",
-  temperature: 0,
-  maxOutputTokens: 500,
-  apiKey: process.env.GEMINI_API_KEY,
-});
+const llm = createResilientLLM({ temperature: 0, maxOutputTokens: 500 });
 
 export async function runTriage(state) {
   console.log("==> Triage Agent: Analyzing anomalies for specialist routing...");

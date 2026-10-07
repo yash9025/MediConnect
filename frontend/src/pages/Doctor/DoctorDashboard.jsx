@@ -13,6 +13,16 @@ const DoctorDashboard = () => {
     }
   }, [dToken]);
 
+  const isDatePassed = (slotDate) => {
+    const [day, month, year] = slotDate.split('_').map(Number);
+    const appointmentDateInt = year * 10000 + month * 100 + day;
+    
+    const today = new Date();
+    const todayInt = today.getFullYear() * 10000 + (today.getMonth() + 1) * 100 + today.getDate();
+    
+    return appointmentDateInt < todayInt;
+  };
+
   return (
     dashData && (
       <div className="md:mt-[90px] mt-20 p-8 bg-white min-h-screen md:ml-[250px] ml-16 transition-all duration-300 w-full">
@@ -66,6 +76,8 @@ const DoctorDashboard = () => {
                     <p className="text-red-400 font-medium">Cancelled</p>
                   ) : item.isCompleted ? (
                     <p className="text-green-400 font-medium">Completed</p>
+                  ) : isDatePassed(item.slotDate) ? (
+                    <p className="text-orange-400 font-medium">Not Attended</p>
                   ) : (
                     <div className="flex gap-3">
                       <button
